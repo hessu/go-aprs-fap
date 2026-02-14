@@ -204,15 +204,13 @@ func (p *Packet) parseCompressedPosition(body string, opt Options) error {
 	if len(body) > 13 {
 		comment := body[13:]
 
-		// If symbol is weather, parse weather from comment
+		// If symbol is weather, parse weather from comment.
+		// Non-weather comment text is intentionally discarded.
 		if p.SymbolCode == '_' {
 			p.Type = PacketTypeWx
 			wx := &Weather{}
 			p.Wx = wx
-			wxComment := parseWeatherFromComment(comment, wx)
-			if wxComment != "" {
-				p.Comment = wxComment
-			}
+			parseWeatherFromComment(comment, wx)
 			return nil
 		}
 
@@ -249,11 +247,10 @@ func (p *Packet) parsePositionComment(comment string) {
 		wx := &Weather{}
 		p.Wx = wx
 		// Weather data starts with wind direction/speed: CCC/SSS
-		// Then the rest is weather fields
-		wxComment := parseWeatherFromComment(comment, wx)
-		if wxComment != "" {
-			p.Comment = wxComment
-		}
+		// Then the rest is weather fields.
+		// Non-weather comment text is intentionally discarded to avoid
+		// confusion with weather data (matching Perl FAP behavior).
+		parseWeatherFromComment(comment, wx)
 		return
 	}
 
