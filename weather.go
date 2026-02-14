@@ -80,62 +80,64 @@ func parseWeatherFields(data string, wx *Weather) {
 			break
 		}
 
+		consumed := 0
+
 		switch data[i] {
 		case 'c': // Wind direction (degrees)
 			if val, n := parseWxInt(data[i+1:], 3); n > 0 {
 				v := float64(val)
 				wx.WindDirection = &v
-				i += 1 + n
-			} else {
-				i += 1 + skipWxField(data[i+1:], 3)
+				consumed = 1 + n
+			} else if n := skipWxField(data[i+1:], 3); n > 0 {
+				consumed = 1 + n
 			}
 		case 's': // Wind speed (mph, convert to m/s)
 			if val, n := parseWxInt(data[i+1:], 3); n > 0 {
 				v := float64(val) * 0.44704
 				wx.WindSpeed = &v
-				i += 1 + n
-			} else {
-				i += 1 + skipWxField(data[i+1:], 3)
+				consumed = 1 + n
+			} else if n := skipWxField(data[i+1:], 3); n > 0 {
+				consumed = 1 + n
 			}
 		case 'g': // Wind gust (mph, convert to m/s)
 			if val, n := parseWxInt(data[i+1:], 3); n > 0 {
 				v := float64(val) * 0.44704
 				wx.WindGust = &v
-				i += 1 + n
-			} else {
-				i += 1 + skipWxField(data[i+1:], 3)
+				consumed = 1 + n
+			} else if n := skipWxField(data[i+1:], 3); n > 0 {
+				consumed = 1 + n
 			}
 		case 't': // Temperature (Fahrenheit, convert to Celsius)
 			if val, n := parseWxSignedInt(data[i+1:], 3); n > 0 {
 				v := (float64(val) - 32.0) * 5.0 / 9.0
 				wx.Temp = &v
-				i += 1 + n
-			} else {
-				i += 1 + skipWxField(data[i+1:], 3)
+				consumed = 1 + n
+			} else if n := skipWxField(data[i+1:], 3); n > 0 {
+				consumed = 1 + n
 			}
 		case 'r': // Rain last hour (hundredths of inch, convert to mm)
 			if val, n := parseWxInt(data[i+1:], 3); n > 0 {
 				v := float64(val) * 0.254
 				wx.Rain1h = &v
-				i += 1 + n
-			} else {
-				i += 1 + skipWxField(data[i+1:], 3)
+				consumed = 1 + n
+			} else if n := skipWxField(data[i+1:], 3); n > 0 {
+				consumed = 1 + n
 			}
 		case 'p': // Rain last 24h (hundredths of inch, convert to mm)
 			if val, n := parseWxInt(data[i+1:], 3); n > 0 {
 				v := float64(val) * 0.254
 				wx.Rain24h = &v
-				i += 1 + n
-			} else {
-				i += 1 + skipWxField(data[i+1:], 3)
+				consumed = 1 + n
+			} else if n := skipWxField(data[i+1:], 3); n > 0 {
+				consumed = 1 + n
 			}
 		case 'P': // Rain since midnight (hundredths of inch, convert to mm)
 			if val, n := parseWxInt(data[i+1:], 3); n > 0 {
 				v := float64(val) * 0.254
 				wx.RainMidnight = &v
-				i += 1 + n
-			} else {
-				i += 1 + skipWxField(data[i+1:], 3)
+				consumed = 1 + n
+			} else if n := skipWxField(data[i+1:], 3); n > 0 {
+				consumed = 1 + n
 			}
 		case 'h': // Humidity (%)
 			if val, n := parseWxInt(data[i+1:], 2); n > 0 {
@@ -143,17 +145,17 @@ func parseWeatherFields(data string, wx *Weather) {
 					val = 100
 				}
 				wx.Humidity = &val
-				i += 1 + n
-			} else {
-				i += 1 + skipWxField(data[i+1:], 2)
+				consumed = 1 + n
+			} else if n := skipWxField(data[i+1:], 2); n > 0 {
+				consumed = 1 + n
 			}
 		case 'b': // Barometric pressure (tenths of millibar)
 			if val, n := parseWxInt(data[i+1:], 5); n > 0 {
 				v := float64(val) / 10.0
 				wx.Pressure = &v
-				i += 1 + n
-			} else {
-				i += 1 + skipWxField(data[i+1:], 5)
+				consumed = 1 + n
+			} else if n := skipWxField(data[i+1:], 5); n > 0 {
+				consumed = 1 + n
 			}
 		case 'L', 'l': // Luminosity
 			if val, n := parseWxInt(data[i+1:], 3); n > 0 {
@@ -161,28 +163,32 @@ func parseWeatherFields(data string, wx *Weather) {
 					val += 1000
 				}
 				wx.Luminosity = &val
-				i += 1 + n
-			} else {
-				i += 1 + skipWxField(data[i+1:], 3)
+				consumed = 1 + n
+			} else if n := skipWxField(data[i+1:], 3); n > 0 {
+				consumed = 1 + n
 			}
-		case 'O': // Snowfall: s followed by 3 digits (tenths of inches, convert to mm)
+		case 'O': // Snowfall: s followed by 3 digits (hundredths of inches, convert to mm)
 			if i+1 < len(data) && data[i+1] == 's' {
-				// This is "Os" snowfall (different from plain 's' wind speed)
 				if val, n := parseWxInt(data[i+2:], 3); n > 0 {
-					v := float64(val) * 2.54 // tenths of inch to mm
+					v := float64(val) * 0.254 // hundredths of inch to mm
 					wx.Snow24h = &v
-					i += 2 + n
-				} else {
-					i += 2 + skipWxField(data[i+2:], 3)
+					consumed = 2 + n
+				} else if n := skipWxField(data[i+2:], 3); n > 0 {
+					consumed = 2 + n
 				}
-			} else {
-				i++
 			}
 		case '#': // Raw rain counter
-			// Skip, not the same as snow
-			i += 1 + skipWxField(data[i+1:], 3)
-		default:
-			// Remaining text is either a short software ID or a comment
+			if n := skipWxField(data[i+1:], 3); n > 0 {
+				consumed = 1 + n
+			} else if _, n := parseWxInt(data[i+1:], 3); n > 0 {
+				consumed = 1 + n
+			}
+		}
+
+		if consumed > 0 {
+			i += consumed
+		} else {
+			// Not a recognized weather field - remaining text is comment or software ID
 			remaining := strings.TrimSpace(data[i:])
 			if isSoftwareID(remaining) {
 				wx.Soft = remaining
@@ -208,12 +214,19 @@ func isSoftwareID(s string) bool {
 	return true
 }
 
-// skipWxField returns how many characters to skip for a weather field of maxLen.
+// skipWxField returns how many characters to skip for a missing weather field
+// (containing only dots or spaces) of maxLen. Returns 0 if the field contains
+// other characters (indicating it's not a weather field placeholder).
 func skipWxField(s string, maxLen int) int {
-	if len(s) >= maxLen {
-		return maxLen
+	if len(s) < maxLen {
+		return 0
 	}
-	return len(s)
+	for i := 0; i < maxLen; i++ {
+		if s[i] != '.' && s[i] != ' ' {
+			return 0
+		}
+	}
+	return maxLen
 }
 
 // parseWxInt extracts an integer of up to maxDigits from the string.
