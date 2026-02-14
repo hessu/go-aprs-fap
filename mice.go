@@ -189,14 +189,17 @@ func (p *Packet) parseMicE(opt Options) error {
 	// Check for base-91 telemetry |...| first (before altitude)
 	comment = p.parseMicEBase91Telemetry(comment)
 
-	// Check for altitude in Mic-E format: }BBB} where BBB is base-91
-	// The altitude is encoded as }XXX where XXX is 3 base-91 chars
-	if idx := strings.IndexByte(comment, '}'); idx >= 0 && idx+3 < len(comment) {
-		altChars := comment[idx+1 : idx+4]
-		alt := float64((int(altChars[0])-33)*91*91+(int(altChars[1])-33)*91+(int(altChars[2])-33)) - 10000.0
-		alt *= 0.3048 // feet to meters
-		p.Altitude = &alt
-		comment = comment[:idx] + comment[idx+4:]
+	// Check for altitude in Mic-E format: XXX} where XXX are 3 base-91 chars
+	// followed by '}' as terminator. Altitude in meters, origin at -10000m.
+	if idx := strings.IndexByte(comment, '}'); idx >= 3 {
+		a1 := comment[idx-3]
+		a2 := comment[idx-2]
+		a3 := comment[idx-1]
+		if a1 >= '!' && a1 <= '{' && a2 >= '!' && a2 <= '{' && a3 >= '!' && a3 <= '{' {
+			alt := float64((int(a1)-33)*91*91+(int(a2)-33)*91+(int(a3)-33)) - 10000.0
+			p.Altitude = &alt
+			comment = comment[:idx-3] + comment[idx+1:]
+		}
 	}
 
 	// Check for DAO extension in mic-e comment
