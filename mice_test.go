@@ -329,3 +329,20 @@ func TestMicEMangled(t *testing.T) {
 		t.Errorf("mice_mangled = false, want true")
 	}
 }
+
+func TestMicEMBitsToMessage(t *testing.T) {
+	tests := []struct {
+		bits string
+		want string
+	}{
+		{"111", "Off Duty"},
+		{"110", "En Route"},
+		{"000", "Emergency"},
+	}
+	for _, tc := range tests {
+		got := MicEMBitsToMessage(tc.bits)
+		if got != tc.want {
+			t.Errorf("MicEMBitsToMessage(%q): got %q, want %q", tc.bits, got, tc.want)
+		}
+	}
+}

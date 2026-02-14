@@ -158,78 +158,6 @@ func TestParseUncompressedNegativeAltitude(t *testing.T) {
 	}
 }
 
-// TestParseMicENonMoving tests a non-moving target's mic-e packet.
-func TestParseMicENonMoving(t *testing.T) {
-	packet := "OH7LZB-13>SX15S6,TCPIP*,qAC,FOURTH:'I',l \x1C>/]"
-	p, err := ParseAPRS(packet)
-	if err != nil {
-		t.Fatalf("failed to parse: %v", err)
-	}
-
-	if p.Type != PacketTypeLocation {
-		t.Errorf("type: got %q, want %q", p.Type, PacketTypeLocation)
-	}
-	if p.Format != FormatMicE {
-		t.Errorf("format: got %q, want %q", p.Format, FormatMicE)
-	}
-	if p.SrcCallsign != "OH7LZB-13" {
-		t.Errorf("src: got %q, want %q", p.SrcCallsign, "OH7LZB-13")
-	}
-	if p.SymbolTable != '/' {
-		t.Errorf("symbol table: got %c, want /", p.SymbolTable)
-	}
-	if p.SymbolCode != '>' {
-		t.Errorf("symbol code: got %c, want >", p.SymbolCode)
-	}
-	if p.Latitude == nil || !approxEqual(*p.Latitude, -38.2560, 0.001) {
-		t.Errorf("latitude: got %v, want ~-38.2560", p.Latitude)
-	}
-	if p.Longitude == nil || !approxEqual(*p.Longitude, 145.1860, 0.001) {
-		t.Errorf("longitude: got %v, want ~145.1860", p.Longitude)
-	}
-}
-
-// TestParseMicEMoving tests a moving target's mic-e packet.
-func TestParseMicEMoving(t *testing.T) {
-	packet := "OH7LZB-2>TQ4W2V,WIDE2-1,qAo,OH7LZB:`c51!f?>/]\"3x}="
-	p, err := ParseAPRS(packet)
-	if err != nil {
-		t.Fatalf("failed to parse: %v", err)
-	}
-
-	if p.Type != PacketTypeLocation {
-		t.Errorf("type: got %q, want %q", p.Type, PacketTypeLocation)
-	}
-	if p.MBits != "110" {
-		t.Errorf("mbits: got %q, want %q", p.MBits, "110")
-	}
-	if p.Latitude == nil || !approxEqual(*p.Latitude, 41.7877, 0.001) {
-		t.Errorf("latitude: got %v, want ~41.7877", p.Latitude)
-	}
-	if p.Longitude == nil || !approxEqual(*p.Longitude, -71.4202, 0.001) {
-		t.Errorf("longitude: got %v, want ~-71.4202", p.Longitude)
-	}
-	if p.Speed == nil || !approxEqual(*p.Speed, 105.56, 0.1) {
-		t.Errorf("speed: got %v, want ~105.56", p.Speed)
-	}
-	if p.Course == nil || *p.Course != 35 {
-		t.Errorf("course: got %v, want 35", p.Course)
-	}
-	if p.Altitude == nil || *p.Altitude != 6 {
-		// Mic-E altitude: check it parsed
-		t.Logf("altitude: got %v (may differ due to encoding)", p.Altitude)
-	}
-}
-
-// TestParseMicEInvalidSymTable tests error on invalid symbol table.
-func TestParseMicEInvalidSymTable(t *testing.T) {
-	packet := "OZ2BRN-4>5U2V08,OZ3RIN-3,OZ4DIA-2*,WIDE2-1,qAR,DB0KUE:`'O<l!{,,\"4R}"
-	_, err := ParseAPRS(packet)
-	if err == nil {
-		t.Error("expected error for invalid symbol table, got nil")
-	}
-}
-
 // TestParseMessage tests message parsing.
 func TestParseMessage(t *testing.T) {
 	packet := "OH7AA-1>APRS,WIDE1-1,WIDE2-2,qAo,OH7AA::OH7LZB   :Testing, 1 2 3{42"
@@ -353,24 +281,6 @@ func TestDirection(t *testing.T) {
 	d = Direction(60.0, 25.0, 60.0, 26.0)
 	if d < 85 || d > 95 {
 		t.Errorf("direction east: got %.1f, want ~90", d)
-	}
-}
-
-// TestMicEMBitsToMessage tests Mic-E message type decoding.
-func TestMicEMBitsToMessage(t *testing.T) {
-	tests := []struct {
-		bits string
-		want string
-	}{
-		{"111", "Off Duty"},
-		{"110", "En Route"},
-		{"000", "Emergency"},
-	}
-	for _, tc := range tests {
-		got := MicEMBitsToMessage(tc.bits)
-		if got != tc.want {
-			t.Errorf("MicEMBitsToMessage(%q): got %q, want %q", tc.bits, got, tc.want)
-		}
 	}
 }
 
