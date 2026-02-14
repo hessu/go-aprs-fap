@@ -389,8 +389,8 @@ func TestParseObject(t *testing.T) {
 	if p.Type != PacketTypeObject {
 		t.Errorf("type: got %q, want %q", p.Type, PacketTypeObject)
 	}
-	if p.ObjectName != "LEADER" {
-		t.Errorf("object name: got %q, want %q", p.ObjectName, "LEADER")
+	if p.ObjectName != "LEADER   " {
+		t.Errorf("object name: got %q, want %q", p.ObjectName, "LEADER   ")
 	}
 	if p.Alive == nil || !*p.Alive {
 		t.Error("expected object to be alive")

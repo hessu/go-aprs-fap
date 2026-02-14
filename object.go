@@ -2,7 +2,6 @@ package fap
 
 import (
 	"fmt"
-	"strings"
 )
 
 // parseObject parses an APRS object packet.
@@ -17,7 +16,7 @@ func (p *Packet) parseObject(opt Options) error {
 	}
 
 	// Object name is 9 characters
-	p.ObjectName = strings.TrimSpace(body[:9])
+	p.ObjectName = body[:9]
 
 	// Alive/killed indicator
 	aliveChar := body[9]
