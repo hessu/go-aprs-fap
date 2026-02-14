@@ -310,7 +310,18 @@ func (p *Packet) parseBody(opt Options) error {
 		return p.parsePositionWithTimestamp(opt, typeChar)
 	case '\'', '`':
 		// Mic-E
-		return p.parseMicE(opt)
+		err := p.parseMicE(opt)
+		if err != nil && opt.AcceptBrokenMicE {
+			// Reset fields that parseMicE may have partially set
+			p.ResultCode = ""
+			p.ResultMsg = ""
+			p.Speed = nil
+			p.Course = nil
+			p.Altitude = nil
+			p.Comment = ""
+			return p.parseMicEMangled(opt)
+		}
+		return err
 	case ':':
 		// Message
 		return p.parseMessage(opt)

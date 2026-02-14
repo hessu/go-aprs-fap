@@ -312,43 +312,52 @@ func (p *Packet) parseMicEBase91Telemetry(comment string) string {
 	return strings.TrimSpace(comment[:bestStart] + comment[bestEnd+1:])
 }
 
+// isHexString checks if all characters in a string are hexadecimal.
+func isHexString(s string) bool {
+	for _, c := range s {
+		if !((c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F')) {
+			return false
+		}
+	}
+	return true
+}
+
 // parseMicETelemetry extracts telemetry data from a Mic-E comment.
 func (p *Packet) parseMicETelemetry(comment string) string {
 	if len(comment) < 2 {
 		return comment
 	}
 
-	marker := comment[0]
+	if comment[0] != '\'' {
+		return comment
+	}
+
 	rest := comment[1:]
 
-	// 5-channel telemetry: 10 hex characters
-	// 2-channel telemetry: 4 hex characters
+	// Try 5-channel (10 hex chars) first, then 2-channel (4 hex chars)
 	var hexLen int
-	if marker == '\'' {
-		if len(rest) >= 10 {
-			hexLen = 10
-		} else if len(rest) >= 4 {
-			hexLen = 4
-		} else {
-			return comment
-		}
+	if len(rest) >= 10 && isHexString(rest[:10]) {
+		hexLen = 10
+	} else if len(rest) >= 4 && isHexString(rest[:4]) {
+		hexLen = 4
 	} else {
 		return comment
 	}
 
 	hexStr := rest[:hexLen]
-	// Validate hex characters
-	for _, c := range hexStr {
-		if !((c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F')) {
-			return comment
-		}
-	}
-
 	vals := make([]*float64, 0)
-	for i := 0; i < hexLen; i += 2 {
-		v, _ := strconv.ParseInt(hexStr[i:i+2], 16, 64)
-		f := float64(v)
-		vals = append(vals, &f)
+	if hexLen == 4 {
+		// 2-channel telemetry: channels 1 and 3, with channel 2 as zero
+		v1, _ := strconv.ParseInt(hexStr[0:2], 16, 64)
+		v2, _ := strconv.ParseInt(hexStr[2:4], 16, 64)
+		f1, f0, f2 := float64(v1), float64(0), float64(v2)
+		vals = append(vals, &f1, &f0, &f2)
+	} else {
+		for i := 0; i < hexLen; i += 2 {
+			v, _ := strconv.ParseInt(hexStr[i:i+2], 16, 64)
+			f := float64(v)
+			vals = append(vals, &f)
+		}
 	}
 
 	p.TelemetryData = &Telemetry{
@@ -384,10 +393,11 @@ func MicEMBitsToMessage(mbits string) string {
 }
 
 // parseMicEMangled attempts to parse a Mic-E packet with a missing speed/course byte.
+// aprsd replaces non-printable mic-e bytes with spaces, and some software
+// collapses multiple spaces into one, losing a byte. This function detects
+// that pattern, inserts the missing space, then parses position and symbol
+// normally (but skips speed/course since they are unreliable).
 func (p *Packet) parseMicEMangled(opt Options) error {
-	// Mark as mangled
-	p.MiceMangled = true
-
 	body := p.Body[1:]
 	dst := p.DstCallsign
 
@@ -398,6 +408,26 @@ func (p *Packet) parseMicEMangled(opt Options) error {
 	if len(dst) < 6 || len(body) < 7 {
 		return p.fail(ErrMiceShort, "mangled Mic-E packet too short")
 	}
+
+	// Check for the known corruption pattern:
+	// 4 valid position bytes, a single space (collapsed from two), symbol code, symbol table
+	if len(body) >= 7 &&
+		body[0] >= 0x26 && body[0] <= 0x7f &&
+		body[1] >= 0x26 && body[1] <= 0x61 &&
+		body[2] >= 0x1c && body[2] <= 0x7f &&
+		body[3] >= 0x1c && body[3] <= 0x7f &&
+		body[4] == 0x20 &&
+		body[5] >= 0x21 && body[5] <= 0x7d &&
+		(body[6] == '/' || body[6] == '\\' || (body[6] >= 'A' && body[6] <= 'Z') || (body[6] >= '0' && body[6] <= '9')) {
+		// Insert the missing space to restore the 8-byte layout
+		body = body[:5] + " " + body[5:]
+	} else {
+		return p.fail(ErrMiceInvInfoField, "invalid Mic-E information field")
+	}
+
+	p.MiceMangled = true
+	p.Type = PacketTypeLocation
+	p.Format = FormatMicE
 
 	// Decode latitude from destination (same as normal)
 	latDigits := make([]int, 6)
@@ -459,13 +489,14 @@ func (p *Packet) parseMicEMangled(opt Options) error {
 	}
 	p.Longitude = &lon
 
-	// Skip speed/course (missing byte)
-	// Symbol code and table
-	p.SymbolCode = body[3]
-	p.SymbolTable = body[4]
+	// Skip speed/course — unreliable in mangled packets
+	// Symbol code and table from the restored 8-byte layout
+	p.SymbolCode = body[6]
+	p.SymbolTable = body[7]
 
-	if len(body) > 5 {
-		p.Comment = body[5:]
+	// Comment
+	if len(body) > 8 {
+		p.Comment = body[8:]
 	}
 
 	return nil
