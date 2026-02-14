@@ -5,10 +5,26 @@ import (
 )
 
 // parseStatus parses an APRS status report.
-// Format: >status text
+// Format: >DDHHMMzstatus text  or  >status text
 func (p *Packet) parseStatus(opt Options) error {
 	p.Type = PacketTypeStatus
-	p.Status = strings.TrimSpace(p.Body[1:])
+
+	body := p.Body[1:] // skip '>'
+
+	// Check if body starts with a timestamp (7 chars ending in z, h, or /)
+	if len(body) >= 7 {
+		indicator := body[6]
+		if indicator == 'z' || indicator == '/' {
+			// Timestamp: DDHHMMz or DDHHMM/
+			ts, err := parseTimestamp(body[:7])
+			if err == nil {
+				p.Timestamp = ts
+				body = body[7:]
+			}
+		}
+	}
+
+	p.Status = body
 	return nil
 }
 

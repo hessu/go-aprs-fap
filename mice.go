@@ -177,7 +177,7 @@ func (p *Packet) parseMicE(opt Options) error {
 	if p.SymbolTable != '/' && p.SymbolTable != '\\' &&
 		!(p.SymbolTable >= 'A' && p.SymbolTable <= 'Z') &&
 		!(p.SymbolTable >= '0' && p.SymbolTable <= '9') {
-		return p.fail(ErrMiceInvSymTable, fmt.Sprintf("invalid Mic-E symbol table: %c", p.SymbolTable))
+		return p.fail(ErrSymInvTable, fmt.Sprintf("invalid Mic-E symbol table: %c", p.SymbolTable))
 	}
 
 	// Rest is comment, possibly with altitude and telemetry
@@ -186,25 +186,127 @@ func (p *Packet) parseMicE(opt Options) error {
 		comment = body[8:]
 	}
 
+	// Check for base-91 telemetry |...| first (before altitude)
+	comment = p.parseMicEBase91Telemetry(comment)
+
 	// Check for altitude in Mic-E format: }BBB} where BBB is base-91
-	if len(comment) >= 4 && comment[len(comment)-4] == '}' {
-		altChars := comment[len(comment)-3:]
+	// The altitude is encoded as }XXX where XXX is 3 base-91 chars
+	if idx := strings.IndexByte(comment, '}'); idx >= 0 && idx+3 < len(comment) {
+		altChars := comment[idx+1 : idx+4]
 		alt := float64((int(altChars[0])-33)*91*91+(int(altChars[1])-33)*91+(int(altChars[2])-33)) - 10000.0
 		alt *= 0.3048 // feet to meters
 		p.Altitude = &alt
-		comment = comment[:len(comment)-4]
+		comment = comment[:idx] + comment[idx+4:]
 	}
 
-	// Check for Mic-E telemetry
+	// Check for DAO extension in mic-e comment
+	comment = p.parseDAO(comment)
+
+	// Check for Mic-E hex telemetry (old format)
 	if len(comment) >= 2 && (comment[0] == '\'' || comment[0] == '`') {
 		comment = p.parseMicETelemetry(comment)
 	}
 
-	// Remove leading Mic-E type codes (>, ], etc.)
-	// These are device/software identifiers
 	p.Comment = comment
 
 	return nil
+}
+
+// isBase91TelemetryChar checks if a character is valid in base-91 telemetry (0x21-0x7B).
+func isBase91TelemetryChar(c byte) bool {
+	return c >= '!' && c <= '{'
+}
+
+// parseMicEBase91Telemetry extracts base-91 encoded telemetry from mic-e comments.
+// Format: |ssaabbccddee| where ss=sequence, aa-ee=values in base-91
+// or shorter: |ssaa| for just sequence and one value.
+// Uses last-match semantics (greedy) to match Perl's regex behavior.
+func (p *Packet) parseMicEBase91Telemetry(comment string) string {
+	// Search from the end for the closing |, then find the matching opening |
+	// with valid base-91 content between them. This matches Perl's greedy (.*)
+	// before the first \| in the regex.
+	bestStart := -1
+	bestEnd := -1
+
+	for end := len(comment) - 1; end >= 0; end-- {
+		if comment[end] != '|' {
+			continue
+		}
+		// Try to find an opening | before this one with valid content
+		for start := end - 1; start >= 0; start-- {
+			if comment[start] != '|' {
+				continue
+			}
+			content := comment[start+1 : end]
+			// Must be even length, >= 4 chars (seq pair + at least 1 value pair)
+			if len(content) < 4 || len(content)%2 != 0 {
+				continue
+			}
+			// All chars must be valid base-91
+			valid := true
+			for j := 0; j < len(content); j++ {
+				if !isBase91TelemetryChar(content[j]) {
+					valid = false
+					break
+				}
+			}
+			if !valid {
+				continue
+			}
+			// Found a valid match - use the one with the latest start (greedy)
+			if start > bestStart {
+				bestStart = start
+				bestEnd = end
+			}
+			break // only need the first valid opening | for this closing |
+		}
+		if bestStart >= 0 {
+			break // use the last (rightmost) closing | that has a valid match
+		}
+	}
+
+	if bestStart < 0 {
+		return comment
+	}
+
+	tlmData := comment[bestStart+1 : bestEnd]
+	pairs := len(tlmData) / 2
+
+	// First pair is sequence number
+	seq := (int(tlmData[0]) - 33) * 91 + (int(tlmData[1]) - 33)
+
+	tlm := &Telemetry{
+		Seq: strconv.Itoa(seq),
+	}
+
+	// Remaining pairs are values (up to 5)
+	vals := make([]*float64, 5)
+	for i := 1; i < pairs && i <= 5; i++ {
+		idx := i * 2
+		val := float64((int(tlmData[idx])-33)*91 + (int(tlmData[idx+1]) - 33))
+		vals[i-1] = &val
+	}
+
+	// If we have 7 pairs, the last one is the binary bits
+	// Perl uses unpack('b8', ...) which is LSB-first bit order
+	if pairs >= 7 {
+		bitsVal := (int(tlmData[12]) - 33) * 91 + (int(tlmData[13]) - 33)
+		bits := ""
+		for b := 0; b < 8; b++ {
+			if bitsVal&(1<<uint(b)) != 0 {
+				bits += "1"
+			} else {
+				bits += "0"
+			}
+		}
+		tlm.Bits = bits
+	}
+
+	tlm.Vals = vals
+	p.TelemetryData = tlm
+
+	// Remove the telemetry from the comment
+	return strings.TrimSpace(comment[:bestStart] + comment[bestEnd+1:])
 }
 
 // parseMicETelemetry extracts telemetry data from a Mic-E comment.
@@ -239,10 +341,11 @@ func (p *Packet) parseMicETelemetry(comment string) string {
 		}
 	}
 
-	vals := make([]float64, 0)
+	vals := make([]*float64, 0)
 	for i := 0; i < hexLen; i += 2 {
 		v, _ := strconv.ParseInt(hexStr[i:i+2], 16, 64)
-		vals = append(vals, float64(v))
+		f := float64(v)
+		vals = append(vals, &f)
 	}
 
 	p.TelemetryData = &Telemetry{

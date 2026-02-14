@@ -419,8 +419,8 @@ func TestParseTelemetry(t *testing.T) {
 	}
 
 	for i, want := range []float64{1, 2, 3, 4, 5} {
-		if p.TelemetryData.Vals[i] != want {
-			t.Errorf("val[%d]: got %f, want %f", i, p.TelemetryData.Vals[i], want)
+		if p.TelemetryData.Vals[i] == nil || *p.TelemetryData.Vals[i] != want {
+			t.Errorf("val[%d]: got %v, want %f", i, p.TelemetryData.Vals[i], want)
 		}
 	}
 }

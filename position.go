@@ -52,11 +52,15 @@ func (p *Packet) parsePositionWithTimestamp(opt Options, typeChar byte) error {
 	}
 
 	// Parse timestamp (7 characters)
-	ts, err := parseTimestamp(body[:7])
-	if err != nil {
-		return p.fail(ErrTimestampInvalid, fmt.Sprintf("invalid timestamp: %v", err))
+	if opt.RawTimestamp {
+		p.RawTimestamp = body[:6] // strip the indicator char
+	} else {
+		ts, err := parseTimestamp(body[:7])
+		if err != nil {
+			return p.fail(ErrTimestampInvalid, fmt.Sprintf("invalid timestamp: %v", err))
+		}
+		p.Timestamp = ts
 	}
-	p.Timestamp = ts
 
 	posBody := body[7:]
 	if len(posBody) == 0 {
@@ -80,7 +84,7 @@ func (p *Packet) parseUncompressedPosition(body string, opt Options) error {
 	// Parse latitude: DDMM.MMN
 	lat, ambiguity, err := parseUncompressedLat(body[:8])
 	if err != nil {
-		return p.fail(ErrPosLatInvalid, fmt.Sprintf("invalid latitude: %v", err))
+		return p.fail(ErrLocInvalid, fmt.Sprintf("invalid latitude: %v", err))
 	}
 
 	p.Latitude = &lat
@@ -88,6 +92,11 @@ func (p *Packet) parseUncompressedPosition(body string, opt Options) error {
 
 	// Symbol table character
 	p.SymbolTable = body[8]
+
+	// Validate symbol table
+	if !isValidSymbolTable(p.SymbolTable) {
+		return p.fail(ErrSymInvTable, fmt.Sprintf("invalid symbol table: %c", p.SymbolTable))
+	}
 
 	// Parse longitude: DDDMM.MMW
 	lon, err := parseUncompressedLon(body[9:18], ambiguity)
@@ -103,12 +112,17 @@ func (p *Packet) parseUncompressedPosition(body string, opt Options) error {
 	res := posResolution(ambiguity)
 	p.PosResolution = &res
 
-	// Parse the rest (comment, PHG, altitude, etc.)
+	// Parse the rest (comment, PHG, altitude, weather, etc.)
 	if len(body) > 19 {
 		p.parsePositionComment(body[19:])
 	}
 
 	return nil
+}
+
+// isValidSymbolTable checks if a symbol table character is valid.
+func isValidSymbolTable(c byte) bool {
+	return c == '/' || c == '\\' || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9')
 }
 
 // parseCompressedPosition parses a compressed position report.
@@ -188,14 +202,61 @@ func (p *Packet) parseCompressedPosition(body string, opt Options) error {
 
 	// Comment after compressed position
 	if len(body) > 13 {
-		p.Comment = strings.TrimSpace(body[13:])
+		comment := body[13:]
+
+		// If symbol is weather, parse weather from comment
+		if p.SymbolCode == '_' {
+			p.Type = PacketTypeWx
+			wx := &Weather{}
+			p.Wx = wx
+			wxComment := parseWeatherFromComment(comment, wx)
+			if wxComment != "" {
+				p.Comment = wxComment
+			}
+			return nil
+		}
+
+		// Strip inline telemetry |...|
+		comment = stripInlineTelemetry(comment)
+
+		// Check for DAO extension
+		comment = p.parseDAO(comment)
+
+		p.Comment = strings.TrimSpace(comment)
 	}
 
 	return nil
 }
 
+// stripInlineTelemetry removes |...| inline telemetry from comments.
+func stripInlineTelemetry(comment string) string {
+	// Look for |...| at the end of the comment
+	if idx := strings.LastIndex(comment, "|"); idx > 0 {
+		firstIdx := strings.Index(comment, "|")
+		if firstIdx < idx {
+			// Remove the telemetry section
+			comment = comment[:firstIdx] + comment[idx+1:]
+		}
+	}
+	return comment
+}
+
 // parsePositionComment parses the comment section of an uncompressed position.
 func (p *Packet) parsePositionComment(comment string) {
+	// If symbol is weather ('_'), parse weather data from the comment
+	if p.SymbolCode == '_' {
+		p.Type = PacketTypeWx
+		wx := &Weather{}
+		p.Wx = wx
+		// Weather data starts with wind direction/speed: CCC/SSS
+		// Then the rest is weather fields
+		wxComment := parseWeatherFromComment(comment, wx)
+		if wxComment != "" {
+			p.Comment = wxComment
+		}
+		return
+	}
+
 	// Check for PHG data
 	if strings.HasPrefix(comment, "PHG") && len(comment) >= 7 {
 		p.PHG = comment[3:7]
@@ -230,14 +291,83 @@ func (p *Packet) parsePositionComment(comment string) {
 		}
 	}
 
-	// If symbol is weather ('_'), try to parse weather data
-	if p.SymbolCode == '_' {
-		// Weather station with comment instead of weather data -
-		// don't store the comment to avoid confusion
-		return
-	}
+	// Check for DAO extension: !Wxx! or similar
+	comment = p.parseDAO(comment)
 
 	p.Comment = strings.TrimSpace(comment)
+}
+
+// parseDAO parses DAO extensions from comments.
+// Returns the comment with the DAO extension removed.
+func (p *Packet) parseDAO(comment string) string {
+	// Look for !Dxx! pattern (DAO extension)
+	for i := 0; i+4 < len(comment); i++ {
+		if comment[i] == '!' && comment[i+4] == '!' {
+			datumByte := comment[i+1]
+			d1 := comment[i+2]
+			d2 := comment[i+3]
+
+			if datumByte >= 'A' && datumByte <= 'Z' {
+				// Human-readable DAO (digits 0-9)
+				if d1 >= '0' && d1 <= '9' && d2 >= '0' && d2 <= '9' {
+					p.DaoDatumByte = datumByte
+					p.applyHumanDAO(d1, d2)
+					comment = comment[:i] + comment[i+5:]
+					break
+				}
+			}
+			if datumByte >= 'a' && datumByte <= 'z' {
+				// Base-91 DAO
+				if d1 >= '!' && d1 <= '{' && d2 >= '!' && d2 <= '{' {
+					p.DaoDatumByte = datumByte - 32 // uppercase
+					p.applyBase91DAO(d1, d2)
+					comment = comment[:i] + comment[i+5:]
+					break
+				}
+			}
+		}
+	}
+	return comment
+}
+
+// applyHumanDAO applies human-readable DAO adjustments to position.
+func (p *Packet) applyHumanDAO(d1, d2 byte) {
+	if p.Latitude != nil && p.Longitude != nil {
+		latAdd := float64(d1-'0') * 0.001 / 60.0
+		lonAdd := float64(d2-'0') * 0.001 / 60.0
+		if *p.Latitude < 0 {
+			*p.Latitude -= latAdd
+		} else {
+			*p.Latitude += latAdd
+		}
+		if *p.Longitude < 0 {
+			*p.Longitude -= lonAdd
+		} else {
+			*p.Longitude += lonAdd
+		}
+		res := 1.852 // 0.001 minute = 1.852m
+		p.PosResolution = &res
+	}
+}
+
+// applyBase91DAO applies base-91 DAO adjustments to position.
+func (p *Packet) applyBase91DAO(d1, d2 byte) {
+	if p.Latitude != nil && p.Longitude != nil {
+		latAdd := float64(d1-33) / 91.0 * 0.01 / 60.0
+		lonAdd := float64(d2-33) / 91.0 * 0.01 / 60.0
+		if *p.Latitude < 0 {
+			*p.Latitude -= latAdd
+		} else {
+			*p.Latitude += latAdd
+		}
+		if *p.Longitude < 0 {
+			*p.Longitude -= lonAdd
+		} else {
+			*p.Longitude += lonAdd
+		}
+		res := 0.1852 // 0.0001 minute
+		p.PosResolution = &res
+	}
 }
 
 // parsePositionFallback tries a last-resort position parse (looking for '!' in body).

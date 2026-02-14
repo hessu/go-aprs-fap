@@ -19,6 +19,8 @@ package fap
 import (
 	"fmt"
 	"math"
+	"regexp"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -70,13 +72,14 @@ type Weather struct {
 	Snow24h       *float64 // Snow in the last 24 hours in mm
 	Luminosity    *int     // Luminosity in watts per square meter
 	Soft          string   // Software / device identifier
+	commentAfterWx string  // internal: non-weather comment text after weather data
 }
 
 // Telemetry contains telemetry data.
 type Telemetry struct {
-	Seq  string    // Sequence number
-	Vals []float64 // Analog values
-	Bits string    // Digital bits (8-bit string)
+	Seq  string     // Sequence number
+	Vals []*float64 // Analog values (nil = undefined)
+	Bits string     // Digital bits (8-bit string)
 }
 
 // Packet represents a parsed APRS packet.
@@ -116,7 +119,8 @@ type Packet struct {
 	RadioRange *float64 // Radio range in km
 
 	// Timestamp
-	Timestamp *time.Time // Timestamp from the packet
+	Timestamp    *time.Time // Timestamp from the packet (when RawTimestamp is false)
+	RawTimestamp string     // Raw timestamp string (when RawTimestamp option is true)
 
 	// Objects and items
 	ObjectName string // Name of object
@@ -151,6 +155,9 @@ type Packet struct {
 
 	// GPS fix
 	GPSFixStatus *int // GPS fix status (0 or 1)
+
+	// NMEA
+	ChecksumOK *bool // NMEA checksum validation result
 
 	// Comment
 	Comment string // Packet comment text
@@ -223,17 +230,22 @@ func (p *Packet) parseHeader(opt Options) error {
 	// Split at '>'
 	gtIdx := strings.IndexByte(p.Header, '>')
 	if gtIdx < 0 {
-		return p.fail("srccall_nogt", "no '>' in header")
+		return p.fail(ErrSrcCallNoGT, "no '>' in header")
 	}
 
 	p.SrcCallsign = p.Header[:gtIdx]
 	if len(p.SrcCallsign) == 0 {
-		return p.fail("srccall_empty", "source callsign is empty")
+		return p.fail(ErrSrcCallEmpty, "source callsign is empty")
+	}
+
+	// Validate source callsign characters
+	if !srcCallRe.MatchString(p.SrcCallsign) {
+		return p.fail(ErrSrcCallBadChars, "source callsign contains bad characters")
 	}
 
 	rest := p.Header[gtIdx+1:]
 	if len(rest) == 0 {
-		return p.fail("dstcall_empty", "destination callsign is empty")
+		return p.fail(ErrDstCallEmpty, "destination callsign is empty")
 	}
 
 	// Split the rest by commas: first is destination, rest are digipeaters
@@ -241,10 +253,11 @@ func (p *Packet) parseHeader(opt Options) error {
 	p.DstCallsign = parts[0]
 
 	if len(p.DstCallsign) == 0 {
-		return p.fail("dstcall_empty", "destination callsign is empty")
+		return p.fail(ErrDstCallEmpty, "destination callsign is empty")
 	}
 
 	// Parse digipeaters
+	seenQConstr := false
 	for _, d := range parts[1:] {
 		digi := Digipeater{}
 		if strings.HasSuffix(d, "*") {
@@ -254,8 +267,20 @@ func (p *Packet) parseHeader(opt Options) error {
 			digi.Call = d
 		}
 		if len(digi.Call) == 0 {
-			return p.fail("digi_empty", "empty digipeater callsign")
+			return p.fail(ErrDigiEmpty, "empty digipeater callsign")
 		}
+
+		// Validate digipeater callsign
+		if digiCallRe.MatchString(digi.Call) {
+			if qConstrRe.MatchString(digi.Call) {
+				seenQConstr = true
+			}
+		} else if seenQConstr && ipv6HexRe.MatchString(digi.Call) {
+			// Allow 32-char hex IPv6 addresses after q-construct
+		} else {
+			return p.fail(ErrDigiCallBadChars, "digipeater callsign contains bad characters")
+		}
+
 		p.Digipeaters = append(p.Digipeaters, digi)
 	}
 
@@ -271,8 +296,14 @@ func (p *Packet) parseBody(opt Options) error {
 	typeChar := p.Body[0]
 
 	switch typeChar {
-	case '!', '=':
-		// Position without timestamp
+	case '!':
+		// Position without timestamp, or !! ULTW weather
+		if len(p.Body) > 1 && p.Body[1] == '!' {
+			return p.parseULTWLogging(opt)
+		}
+		return p.parsePositionNoTimestamp(opt, typeChar)
+	case '=':
+		// Position without timestamp (with messaging)
 		return p.parsePositionNoTimestamp(opt, typeChar)
 	case '/', '@':
 		// Position with timestamp
@@ -299,7 +330,10 @@ func (p *Packet) parseBody(opt Options) error {
 		// Positionless weather
 		return p.parseWeatherPositionless(opt)
 	case '$':
-		// NMEA
+		// NMEA or $ULTW weather
+		if strings.HasPrefix(p.Body, "$ULTW") {
+			return p.parseULTW(opt)
+		}
 		return p.parseNMEA(opt)
 	case 'T':
 		// Telemetry
@@ -307,11 +341,49 @@ func (p *Packet) parseBody(opt Options) error {
 			return p.parseTelemetry(opt)
 		}
 		return p.parsePositionFallback(opt)
+	case '{':
+		// Experimental
+		if len(p.Body) > 1 && p.Body[1] == '{' {
+			return p.fail(ErrExpUnsupported, "unsupported experimental packet")
+		}
+		return p.parsePositionFallback(opt)
 	default:
 		// Try last-resort position parsing (look for ! in body)
 		return p.parsePositionFallback(opt)
 	}
 }
+
+// CheckAX25Call validates and normalizes an AX.25 callsign.
+// Returns the normalized callsign (with SSID if present) or empty string if invalid.
+func CheckAX25Call(call string) string {
+	re := regexp.MustCompile(`^([A-Z0-9]{1,6})(-\d{1,2})?$`)
+	m := re.FindStringSubmatch(strings.ToUpper(call))
+	if m == nil {
+		return ""
+	}
+	base := m[1]
+	if m[2] == "" {
+		return base
+	}
+	// Parse the SSID (strip the leading dash)
+	ssid, _ := strconv.Atoi(m[2][1:])
+	if ssid > 15 {
+		return ""
+	}
+	return base + "-" + strconv.Itoa(ssid)
+}
+
+// srcCallRe matches valid APRS-IS source callsigns
+var srcCallRe = regexp.MustCompile(`^[A-Za-z0-9-]{1,9}$`)
+
+// digiCallRe matches valid APRS-IS digipeater callsigns
+var digiCallRe = regexp.MustCompile(`^[A-Za-z0-9-]{1,9}$`)
+
+// qConstrRe matches q-constructs
+var qConstrRe = regexp.MustCompile(`^q..$`)
+
+// ipv6HexRe matches 32-character hex strings (IPv6 addresses in APRS-IS paths)
+var ipv6HexRe = regexp.MustCompile(`^[0-9A-F]{32}$`)
 
 // Helper functions
 
