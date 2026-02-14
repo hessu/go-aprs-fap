@@ -163,40 +163,42 @@ func (p *Packet) parseCompressedPosition(body string, opt Options) error {
 	// Compression type byte
 	compType := int(body[12]) - 33
 
-	// GPS fix status
-	if compType&0x20 != 0 {
-		fix := 1
-		p.GPSFixStatus = &fix
-	} else {
-		fix := 0
-		p.GPSFixStatus = &fix
+	// GPS fix status — only set if csT bytes are used (c1 != -1)
+	if c1 != -1 {
+		if compType&0x20 != 0 {
+			fix := 1
+			p.GPSFixStatus = &fix
+		} else {
+			fix := 0
+			p.GPSFixStatus = &fix
+		}
 	}
 
 	// Position resolution for compressed: 0.291 meters
 	res := 0.291
 	p.PosResolution = &res
 
-	amb := 0
-	p.PosAmbiguity = &amb
-
-	// Decode course/speed or altitude
-	if c1 >= 0 && c1 <= 89 {
+	// Decode course/speed, altitude, or radio range.
+	// c1 == -1 (space) or s1 == -1 (space) means csT is not used.
+	if c1 == -1 || s1 == -1 {
+		// csT not used — no speed/course/altitude/range
+	} else if compType&0x18 == 0x10 {
+		// Altitude mode (GPGGA source)
+		cs := c1*91 + s1
+		alt := math.Pow(1.002, float64(cs)) * 0.3048
+		p.Altitude = &alt
+	} else if c1 >= 0 && c1 <= 89 {
+		// Course/speed
 		course := c1 * 4
+		if c1 == 0 {
+			course = 360 // north (0 means unknown in APRS, 360 means north)
+		}
 		p.Course = &course
-		speed := math.Pow(1.08, float64(s1)) - 1.0
-		speed *= 1.852 // knots to km/h
+		speed := (math.Pow(1.08, float64(s1)) - 1.0) * 1.852 // knots to km/h
 		p.Speed = &speed
 	} else if c1 == 90 {
-		// Altitude
-		alt := math.Pow(1.002, float64(c1*91+s1))
-		alt *= 0.3048 // feet to meters
-		p.Altitude = &alt
-	}
-
-	// Radio range
-	if compType&0x18 == 0x10 && c1 >= 0 && c1 <= 89 {
-		rng := 2.0 * math.Pow(1.08, float64(s1))
-		rng *= 1.609344 // miles to km
+		// Radio range
+		rng := 2.0 * math.Pow(1.08, float64(s1)) * 1.609344 // miles to km
 		p.RadioRange = &rng
 	}
 
@@ -205,12 +207,14 @@ func (p *Packet) parseCompressedPosition(body string, opt Options) error {
 		comment := body[13:]
 
 		// If symbol is weather, parse weather from comment.
-		// Non-weather comment text is intentionally discarded.
 		if p.SymbolCode == '_' {
 			p.Type = PacketTypeWx
 			wx := &Weather{}
 			p.Wx = wx
-			parseWeatherFromComment(comment, wx)
+			wxComment := parseWeatherFromComment(comment, wx)
+			if wx.hasData() && wxComment != "" {
+				p.Comment = wxComment
+			}
 			return nil
 		}
 
@@ -246,11 +250,13 @@ func (p *Packet) parsePositionComment(comment string) {
 		p.Type = PacketTypeWx
 		wx := &Weather{}
 		p.Wx = wx
-		// Weather data starts with wind direction/speed: CCC/SSS
-		// Then the rest is weather fields.
-		// Non-weather comment text is intentionally discarded to avoid
-		// confusion with weather data (matching Perl FAP behavior).
-		parseWeatherFromComment(comment, wx)
+		wxComment := parseWeatherFromComment(comment, wx)
+		// Only store remaining comment text if weather data was actually
+		// found. If no weather fields matched, the entire text is garbage
+		// and should be discarded (matching Perl FAP behavior).
+		if wx.hasData() && wxComment != "" {
+			p.Comment = wxComment
+		}
 		return
 	}
 

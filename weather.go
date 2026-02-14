@@ -28,6 +28,14 @@ func (p *Packet) parseWeatherPositionless(opt Options) error {
 	return nil
 }
 
+// hasData returns true if any weather field has been populated.
+func (wx *Weather) hasData() bool {
+	return wx.WindDirection != nil || wx.WindSpeed != nil || wx.WindGust != nil ||
+		wx.Temp != nil || wx.TempIn != nil || wx.Humidity != nil || wx.HumidityIn != nil ||
+		wx.Pressure != nil || wx.Rain1h != nil || wx.Rain24h != nil || wx.RainMidnight != nil ||
+		wx.Snow24h != nil || wx.Luminosity != nil
+}
+
 // parseWeatherFromComment parses weather data from a position packet's comment field.
 // The comment starts with wind direction/speed (CCC/SSS) followed by weather fields.
 // Returns any remaining non-weather comment text.
@@ -174,22 +182,30 @@ func parseWeatherFields(data string, wx *Weather) {
 			// Skip, not the same as snow
 			i += 1 + skipWxField(data[i+1:], 3)
 		default:
-			// Check if we've hit non-weather data (comment or software id)
-			remaining := data[i:]
-			if idx := strings.IndexByte(remaining, '{'); idx >= 0 {
-				wx.Soft = remaining[idx+1:]
-				wx.commentAfterWx = strings.TrimSpace(remaining[:idx])
+			// Remaining text is either a short software ID or a comment
+			remaining := strings.TrimSpace(data[i:])
+			if isSoftwareID(remaining) {
+				wx.Soft = remaining
 			} else {
-				wx.commentAfterWx = strings.TrimSpace(remaining)
+				wx.commentAfterWx = remaining
 			}
 			return
 		}
 	}
+}
 
-	// Check for software identifier
-	if idx := strings.LastIndexByte(data, '{'); idx >= 0 {
-		wx.Soft = data[idx+1:]
+// isSoftwareID checks if a string looks like a weather station software identifier
+// (3-5 alphanumeric/dash/underscore characters).
+func isSoftwareID(s string) bool {
+	if len(s) < 3 || len(s) > 5 {
+		return false
 	}
+	for _, c := range s {
+		if !((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c == '-' || c == '_') {
+			return false
+		}
+	}
+	return true
 }
 
 // skipWxField returns how many characters to skip for a weather field of maxLen.
