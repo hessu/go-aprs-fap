@@ -263,7 +263,7 @@ func (p *Packet) parseHeader(opt *options) error {
 			return p.fail(ErrSrcCallNoAX25, "source callsign is not a valid AX.25 call")
 		}
 		p.SrcCallsign = normalized
-	} else if !srcCallRe.MatchString(p.SrcCallsign) {
+	} else if !isValidSrcCall(p.SrcCallsign) {
 		return p.fail(ErrSrcCallBadChars, "source callsign contains bad characters")
 	}
 
@@ -309,11 +309,11 @@ func (p *Packet) parseHeader(opt *options) error {
 			}
 			digi.Call = normalized
 		} else {
-			if digiCallRe.MatchString(digi.Call) {
-				if qConstrRe.MatchString(digi.Call) {
+			if isValidDigiCall(digi.Call) {
+				if isQConstruct(digi.Call) {
 					seenQConstr = true
 				}
-			} else if seenQConstr && ipv6HexRe.MatchString(digi.Call) {
+			} else if seenQConstr && isIPv6Hex(digi.Call) {
 				// Allow 32-char hex IPv6 addresses after q-construct
 			} else {
 				return p.fail(ErrDigiCallBadChars, "digipeater callsign contains bad characters")
@@ -423,17 +423,48 @@ func CheckAX25Call(call string) string {
 	return base + "-" + strconv.Itoa(ssid)
 }
 
-// srcCallRe matches valid APRS-IS source callsigns
-var srcCallRe = regexp.MustCompile(`^[A-Za-z0-9-]{1,9}$`)
+// isAlnumDash reports whether s is 1–9 characters of [A-Za-z0-9-].
+func isAlnumDash(s string, maxLen int) bool {
+	if len(s) < 1 || len(s) > maxLen {
+		return false
+	}
+	for i := 0; i < len(s); i++ {
+		c := s[i]
+		if !((c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') || c == '-') {
+			return false
+		}
+	}
+	return true
+}
 
-// digiCallRe matches valid APRS-IS digipeater callsigns
-var digiCallRe = regexp.MustCompile(`^[A-Za-z0-9-]{1,9}$`)
+// isValidSrcCall reports whether s is a valid APRS-IS source callsign.
+func isValidSrcCall(s string) bool {
+	return isAlnumDash(s, 9)
+}
 
-// qConstrRe matches q-constructs
-var qConstrRe = regexp.MustCompile(`^q..$`)
+// isValidDigiCall reports whether s is a valid APRS-IS digipeater callsign.
+func isValidDigiCall(s string) bool {
+	return isAlnumDash(s, 9)
+}
 
-// ipv6HexRe matches 32-character hex strings (IPv6 addresses in APRS-IS paths)
-var ipv6HexRe = regexp.MustCompile(`^[0-9A-F]{32}$`)
+// isQConstruct reports whether s is a q-construct (e.g. "qAR", "qAo").
+func isQConstruct(s string) bool {
+	return len(s) == 3 && s[0] == 'q'
+}
+
+// isIPv6Hex reports whether s is a 32-character uppercase hex string.
+func isIPv6Hex(s string) bool {
+	if len(s) != 32 {
+		return false
+	}
+	for i := 0; i < 32; i++ {
+		c := s[i]
+		if !((c >= '0' && c <= '9') || (c >= 'A' && c <= 'F')) {
+			return false
+		}
+	}
+	return true
+}
 
 // Helper functions
 
