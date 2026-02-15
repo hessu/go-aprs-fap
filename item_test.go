@@ -93,6 +93,28 @@ func TestItemShortName(t *testing.T) {
 	}
 }
 
+func TestItemMaxLengthName(t *testing.T) {
+	// Item with maximum 9-character name, terminator at index 9
+	packet := "N0CALL-15>APRS,TCPIP*,qAC,T2TEST:)MyRadio99!4327.00N/00119.00WlMyRadio99"
+
+	p, err := Parse(packet)
+	if err != nil {
+		t.Fatalf("failed to parse 9-char name item: %v", err)
+	}
+	if p.ItemName != "MyRadio99" {
+		t.Errorf("itemname = %q, want %q", p.ItemName, "MyRadio99")
+	}
+	if p.Alive == nil || !*p.Alive {
+		t.Error("expected alive = true")
+	}
+	if p.Latitude == nil {
+		t.Fatal("latitude is nil")
+	}
+	if got := fmt.Sprintf("%.4f", *p.Latitude); got != "43.4500" {
+		t.Errorf("latitude = %s, want 43.4500", got)
+	}
+}
+
 func TestItemTooShort(t *testing.T) {
 	// Packet too short for an item
 	packet := "OH2KKU-1>APRS:)short"

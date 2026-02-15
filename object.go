@@ -61,7 +61,7 @@ func (p *Packet) parseItem(opt *options) error {
 
 	// Item name is 3-9 characters, terminated by ! (alive) or _ (killed)
 	nameEnd := -1
-	for i := 0; i < len(body) && i < 9; i++ {
+	for i := 0; i < len(body) && i < 10; i++ {
 		if body[i] == '!' || body[i] == '_' {
 			nameEnd = i
 			break
