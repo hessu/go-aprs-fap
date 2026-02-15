@@ -213,14 +213,14 @@ func Parse(raw string, opts ...Option) (*Packet, error) {
 	// Split header and body at the first colon
 	colonIdx := strings.IndexByte(raw, ':')
 	if colonIdx < 0 {
-		return p, p.fail("packet_no_body", "no packet body after header")
+		return p, p.fail(ErrPacketNoBody, "no packet body after header")
 	}
 
 	p.Header = raw[:colonIdx]
 	p.Body = raw[colonIdx+1:]
 
 	if len(p.Body) == 0 {
-		return p, p.fail("packet_no_body", "packet body is empty")
+		return p, p.fail(ErrPacketNoBody, "packet body is empty")
 	}
 
 	// Parse header: SRC>DST,DIGI1,DIGI2,...
@@ -329,7 +329,7 @@ func (p *Packet) parseHeader(opt *options) error {
 // parseBody dispatches body parsing based on the packet type identifier.
 func (p *Packet) parseBody(opt *options) error {
 	if len(p.Body) == 0 {
-		return p.fail("packet_no_body", "packet body is empty")
+		return p.fail(ErrPacketNoBody, "packet body is empty")
 	}
 
 	typeChar := p.Body[0]
