@@ -52,27 +52,27 @@ const (
 
 // Digipeater represents a digipeater in the packet path.
 type Digipeater struct {
-	Call       string // Callsign of the digipeater
+	Call      string // Callsign of the digipeater
 	WasDigied bool   // Whether this digipeater has already relayed the packet
 }
 
 // Weather contains weather data from a weather report packet.
 type Weather struct {
-	WindDirection *float64 // Wind direction in degrees
-	WindSpeed     *float64 // Wind speed in m/s
-	WindGust      *float64 // Wind gust speed in m/s
-	Temp          *float64 // Temperature in degrees Celsius
-	TempIn        *float64 // Indoor temperature in degrees Celsius
-	Humidity      *int     // Relative humidity in percent
-	HumidityIn    *int     // Indoor humidity in percent
-	Pressure      *float64 // Barometric pressure in millibars
-	Rain1h        *float64 // Rain in the last hour in mm
-	Rain24h       *float64 // Rain in the last 24 hours in mm
-	RainMidnight  *float64 // Rain since midnight in mm
-	Snow24h       *float64 // Snow in the last 24 hours in mm
-	Luminosity    *int     // Luminosity in watts per square meter
-	Soft          string   // Software / device identifier
-	commentAfterWx string  // internal: non-weather comment text after weather data
+	WindDirection  *float64 // Wind direction in degrees
+	WindSpeed      *float64 // Wind speed in m/s
+	WindGust       *float64 // Wind gust speed in m/s
+	Temp           *float64 // Temperature in degrees Celsius
+	TempIn         *float64 // Indoor temperature in degrees Celsius
+	Humidity       *int     // Relative humidity in percent
+	HumidityIn     *int     // Indoor humidity in percent
+	Pressure       *float64 // Barometric pressure in millibars
+	Rain1h         *float64 // Rain in the last hour in mm
+	Rain24h        *float64 // Rain in the last 24 hours in mm
+	RainMidnight   *float64 // Rain since midnight in mm
+	Snow24h        *float64 // Snow in the last 24 hours in mm
+	Luminosity     *int     // Luminosity in watts per square meter
+	Soft           string   // Software / device identifier
+	commentAfterWx string   // internal: non-weather comment text after weather data
 }
 
 // Telemetry contains telemetry data.
@@ -85,12 +85,12 @@ type Telemetry struct {
 // Packet represents a parsed APRS packet.
 type Packet struct {
 	// Always present on successful parse
-	OrigPacket  string        // Original packet string
-	Header      string        // Raw packet header (before the first colon)
-	Body        string        // Raw packet body (after the first colon)
-	SrcCallsign string        // Source callsign
-	DstCallsign string        // Destination callsign
-	Digipeaters []Digipeater  // Digipeater path
+	OrigPacket  string       // Original packet string
+	Header      string       // Raw packet header (before the first colon)
+	Body        string       // Raw packet body (after the first colon)
+	SrcCallsign string       // Source callsign
+	DstCallsign string       // Destination callsign
+	Digipeaters []Digipeater // Digipeater path
 
 	// Packet type and format
 	Type   PacketType // Packet type
@@ -147,8 +147,8 @@ type Packet struct {
 	Capabilities map[string]string // Station capabilities
 
 	// Mic-E specifics
-	MBits        string // Mic-E message bits
-	MiceMangled  bool   // True if mic-e packet was repaired
+	MBits       string // Mic-E message bits
+	MiceMangled bool   // True if mic-e packet was repaired
 
 	// DAO
 	DaoDatumByte byte // DAO datum byte

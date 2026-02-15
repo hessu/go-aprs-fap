@@ -276,7 +276,7 @@ func (p *Packet) parseMicEBase91Telemetry(comment string) string {
 	pairs := len(tlmData) / 2
 
 	// First pair is sequence number
-	seq := (int(tlmData[0]) - 33) * 91 + (int(tlmData[1]) - 33)
+	seq := (int(tlmData[0])-33)*91 + (int(tlmData[1]) - 33)
 
 	tlm := &Telemetry{
 		Seq: strconv.Itoa(seq),
@@ -293,7 +293,7 @@ func (p *Packet) parseMicEBase91Telemetry(comment string) string {
 	// If we have 7 pairs, the last one is the binary bits
 	// Perl uses unpack('b8', ...) which is LSB-first bit order
 	if pairs >= 7 {
-		bitsVal := (int(tlmData[12]) - 33) * 91 + (int(tlmData[13]) - 33)
+		bitsVal := (int(tlmData[12])-33)*91 + (int(tlmData[13]) - 33)
 		bits := ""
 		for b := 0; b < 8; b++ {
 			if bitsVal&(1<<uint(b)) != 0 {

@@ -2,16 +2,16 @@ package fap
 
 // Error code constants for parse failures.
 const (
-	ErrPacketNoBody    = "packet_no_body"
-	ErrPacketShort     = "packet_short"
-	ErrSrcCallNoGT     = "srccall_nogt"
-	ErrSrcCallEmpty    = "srccall_empty"
-	ErrSrcCallBadChars = "srccall_badchars"
-	ErrDstCallEmpty    = "dstcall_empty"
-	ErrDstCallNoAX25   = "dstcall_noax25"
-	ErrDigiEmpty       = "digi_empty"
+	ErrPacketNoBody     = "packet_no_body"
+	ErrPacketShort      = "packet_short"
+	ErrSrcCallNoGT      = "srccall_nogt"
+	ErrSrcCallEmpty     = "srccall_empty"
+	ErrSrcCallBadChars  = "srccall_badchars"
+	ErrDstCallEmpty     = "dstcall_empty"
+	ErrDstCallNoAX25    = "dstcall_noax25"
+	ErrDigiEmpty        = "digi_empty"
 	ErrDigiCallBadChars = "digicall_badchars"
-	ErrNoBody          = "no_body"
+	ErrNoBody           = "no_body"
 	ErrTypeNotSupported = "type_not_supported"
 	ErrExpUnsupported   = "exp_unsupp"
 
@@ -32,14 +32,14 @@ const (
 	ErrCompInvalid = "comp_invalid"
 
 	// Mic-E errors
-	ErrMiceShort          = "mice_short"
-	ErrMiceInvDstCall     = "mice_inv_dstcall"
-	ErrMiceInvInfoField   = "mice_inv_infofield"
+	ErrMiceShort        = "mice_short"
+	ErrMiceInvDstCall   = "mice_inv_dstcall"
+	ErrMiceInvInfoField = "mice_inv_infofield"
 
 	// Object/item errors
-	ErrObjShort   = "obj_short"
-	ErrObjInvalid = "obj_inv"
-	ErrItemShort  = "item_short"
+	ErrObjShort    = "obj_short"
+	ErrObjInvalid  = "obj_inv"
+	ErrItemShort   = "item_short"
 	ErrItemInvalid = "item_invalid"
 
 	// Message errors
