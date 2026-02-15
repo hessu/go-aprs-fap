@@ -405,9 +405,10 @@ func (p *Packet) parseBody(opt *options) error {
 
 // CheckAX25Call validates and normalizes an AX.25 callsign.
 // Returns the normalized callsign (with SSID if present) or empty string if invalid.
+var ax25CallRe = regexp.MustCompile(`^([A-Z0-9]{1,6})(-\d{1,2})?$`)
+
 func CheckAX25Call(call string) string {
-	re := regexp.MustCompile(`^([A-Z0-9]{1,6})(-\d{1,2})?$`)
-	m := re.FindStringSubmatch(strings.ToUpper(call))
+	m := ax25CallRe.FindStringSubmatch(strings.ToUpper(call))
 	if m == nil {
 		return ""
 	}

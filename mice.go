@@ -76,7 +76,7 @@ func (p *Packet) parseMicE(opt *options) error {
 
 	// Decode latitude from destination callsign
 	latDigits := make([]int, 6)
-	msgBits := ""
+	var msgBuf [3]byte
 	isNorth := false
 	lonOffset := 0
 	isWest := false
@@ -89,7 +89,7 @@ func (p *Packet) parseMicE(opt *options) error {
 		latDigits[i] = info.digit
 
 		if i < 3 {
-			msgBits += strconv.Itoa(info.msgBit)
+			msgBuf[i] = '0' + byte(info.msgBit)
 		}
 		if i == 3 && info.isNorth {
 			isNorth = true
@@ -108,6 +108,7 @@ func (p *Packet) parseMicE(opt *options) error {
 		}
 	}
 
+	msgBits := string(msgBuf[:])
 	p.MBits = msgBits
 
 	// Build latitude
@@ -294,15 +295,15 @@ func (p *Packet) parseMicEBase91Telemetry(comment string) string {
 	// Perl uses unpack('b8', ...) which is LSB-first bit order
 	if pairs >= 7 {
 		bitsVal := (int(tlmData[12])-33)*91 + (int(tlmData[13]) - 33)
-		bits := ""
+		var bits [8]byte
 		for b := range 8 {
 			if bitsVal&(1<<uint(b)) != 0 {
-				bits += "1"
+				bits[b] = '1'
 			} else {
-				bits += "0"
+				bits[b] = '0'
 			}
 		}
-		tlm.Bits = bits
+		tlm.Bits = string(bits[:])
 	}
 
 	tlm.Vals = vals
@@ -431,7 +432,7 @@ func (p *Packet) parseMicEMangled(opt *options) error {
 
 	// Decode latitude from destination (same as normal)
 	latDigits := make([]int, 6)
-	msgBits := ""
+	var msgBuf2 [3]byte
 	isNorth := false
 	lonOffset := 0
 	isWest := false
@@ -443,7 +444,7 @@ func (p *Packet) parseMicEMangled(opt *options) error {
 		}
 		latDigits[i] = info.digit
 		if i < 3 {
-			msgBits += strconv.Itoa(info.msgBit)
+			msgBuf2[i] = '0' + byte(info.msgBit)
 		}
 		if i == 3 && info.isNorth {
 			isNorth = true
@@ -456,7 +457,7 @@ func (p *Packet) parseMicEMangled(opt *options) error {
 		}
 	}
 
-	p.MBits = msgBits
+	p.MBits = string(msgBuf2[:])
 
 	latDeg := float64(latDigits[0]*10 + latDigits[1])
 	latMin := float64(latDigits[2]*10+latDigits[3]) + float64(latDigits[4]*10+latDigits[5])/100.0
