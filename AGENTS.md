@@ -59,6 +59,8 @@ modification. Original expected parsed outcome values must also be used.
 
 ### Test Style
 
-Individual test functions (not table-driven), using `t.Fatalf`/`t.Errorf`
-directly.  Helper: `approxEqual(a, b, tolerance)` for float comparison,
+Individual test functions or table-driven tests with `t.Run` subtests,
+using `t.Fatalf`/`t.Errorf` directly.  Table-driven tests are preferred
+when multiple cases share the same assertion logic.
+Helper: `approxEqual(a, b, tolerance)` for float comparison,
 `floatPtr(v)` for pointer creation in tests.
