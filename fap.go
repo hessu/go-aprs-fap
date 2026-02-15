@@ -82,6 +82,15 @@ type Telemetry struct {
 	Bits string     // Digital bits (8-bit string)
 }
 
+// Message contains data from an APRS message packet.
+type Message struct {
+	Destination string // Message destination callsign
+	Text        string // Message text
+	ID          string // Message ID
+	AckID       string // Message acknowledgment ID
+	RejID       string // Message reject ID
+}
+
 // Packet represents a parsed APRS packet.
 type Packet struct {
 	// Always present on successful parse
@@ -128,11 +137,7 @@ type Packet struct {
 	Alive      *bool  // Object/item alive status
 
 	// Messages
-	Destination string // Message destination callsign
-	Message     string // Message text
-	MessageID   string // Message ID
-	MessageAck  string // Message acknowledgment ID
-	MessageRej  string // Message reject ID
+	Message *Message // Message data (nil if not a message packet)
 
 	// Status
 	Status string // Status text
@@ -179,10 +184,10 @@ type Options struct {
 	RawTimestamp bool
 }
 
-// ParseAPRS parses an APRS packet in TNC2 / APRS-IS text format.
+// Parse parses an APRS packet in TNC2 / APRS-IS text format.
 // It returns a Packet struct with all parsed fields populated.
 // If parsing fails, the returned Packet will have ResultCode and ResultMsg set.
-func ParseAPRS(raw string, opts ...Options) (*Packet, error) {
+func Parse(raw string, opts ...Options) (*Packet, error) {
 	var opt Options
 	if len(opts) > 0 {
 		opt = opts[0]

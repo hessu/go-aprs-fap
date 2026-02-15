@@ -12,7 +12,7 @@ func TestObjectInvalidBroken(t *testing.T) {
 	// so the alive/killed indicator lands in the wrong position.
 	packet := "OH2KKU-1>APRS,TCPIP*,qAC,FIRST:;SRAL HQ *110507zS0%E/Th4_a AKaupinmaenpolku9,open M-Th12-17,F12-14 lcl"
 
-	p, err := ParseAPRS(packet)
+	p, err := Parse(packet)
 	if err == nil {
 		t.Fatal("expected error for broken object packet")
 	}

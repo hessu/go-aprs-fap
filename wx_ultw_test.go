@@ -10,7 +10,7 @@ import (
 func TestULTW(t *testing.T) {
 	packet := "WC4PEM-14>APN391,WIDE2-1,qAo,K2KZ-3:$ULTW0053002D028D02FA2813000D87BD000103E8015703430010000C"
 
-	p, err := ParseAPRS(packet)
+	p, err := Parse(packet)
 	if err != nil {
 		t.Fatalf("failed to parse an ULTW wx packet: %v", err)
 	}
@@ -58,7 +58,7 @@ func TestULTW(t *testing.T) {
 func TestULTWBelowZero(t *testing.T) {
 	packet := "SR3DGT>APN391,SQ2LYH-14,SR4DOS,WIDE2*,qAo,SR4NWO-1:$ULTW00000000FFEA0000296F000A9663000103E80016025D"
 
-	p, err := ParseAPRS(packet)
+	p, err := Parse(packet)
 	if err != nil {
 		t.Fatalf("failed to parse an ULTW wx packet: %v", err)
 	}
@@ -106,7 +106,7 @@ func TestULTWBelowZero(t *testing.T) {
 func TestULTWLogging(t *testing.T) {
 	packet := "MB7DS>APRS,TCPIP*,qAC,APRSUK2:!!00000066013D000028710166--------0158053201200210"
 
-	p, err := ParseAPRS(packet)
+	p, err := Parse(packet)
 	if err != nil {
 		t.Fatalf("failed to parse an ULTW logging wx packet: %v", err)
 	}

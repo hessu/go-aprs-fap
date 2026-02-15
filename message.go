@@ -20,35 +20,38 @@ func (p *Packet) parseMessage(opt Options) error {
 		return p.fail(ErrMsgInvalid, "message addressee field malformed")
 	}
 
-	p.Destination = strings.TrimSpace(body[:9])
+	msg := &Message{}
+	p.Message = msg
+
+	msg.Destination = strings.TrimSpace(body[:9])
 	msgBody := body[10:]
 
 	// Check for ack
 	if strings.HasPrefix(msgBody, "ack") {
-		p.MessageAck = msgBody[3:]
+		msg.AckID = msgBody[3:]
 		return nil
 	}
 
 	// Check for rej
 	if strings.HasPrefix(msgBody, "rej") {
-		p.MessageRej = msgBody[3:]
+		msg.RejID = msgBody[3:]
 		return nil
 	}
 
 	// Look for message ID: {XXXXX
 	if idx := strings.LastIndexByte(msgBody, '{'); idx >= 0 {
-		p.Message = msgBody[:idx]
+		msg.Text = msgBody[:idx]
 		idPart := msgBody[idx+1:]
 
 		// Check for reply-ack: {XXXXX}YY
 		if ridx := strings.IndexByte(idPart, '}'); ridx >= 0 {
-			p.MessageID = idPart[:ridx]
-			p.MessageAck = idPart[ridx+1:]
+			msg.ID = idPart[:ridx]
+			msg.AckID = idPart[ridx+1:]
 		} else {
-			p.MessageID = idPart
+			msg.ID = idPart
 		}
 	} else {
-		p.Message = msgBody
+		msg.Text = msgBody
 	}
 
 	return nil

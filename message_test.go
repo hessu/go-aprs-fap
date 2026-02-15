@@ -13,7 +13,7 @@ func TestMessageNormal(t *testing.T) {
 	for _, msgid := range testMessageIDs {
 		t.Run(fmt.Sprintf("id_%s", msgid), func(t *testing.T) {
 			packet := fmt.Sprintf("OH7AA-1>APRS,WIDE1-1,WIDE2-2,qAo,OH7AA::OH7LZB   :Testing, 1 2 3{%s", msgid)
-			p, err := ParseAPRS(packet)
+			p, err := Parse(packet)
 			if err != nil {
 				t.Fatalf("failed to parse message: %v", err)
 			}
@@ -23,17 +23,20 @@ func TestMessageNormal(t *testing.T) {
 			if p.Type != PacketTypeMessage {
 				t.Errorf("type = %q, want %q", p.Type, PacketTypeMessage)
 			}
-			if p.Destination != "OH7LZB" {
-				t.Errorf("destination = %q, want %q", p.Destination, "OH7LZB")
+			if p.Message == nil {
+				t.Fatalf("message is nil")
 			}
-			if p.MessageID != msgid {
-				t.Errorf("messageid = %q, want %q", p.MessageID, msgid)
+			if p.Message.Destination != "OH7LZB" {
+				t.Errorf("destination = %q, want %q", p.Message.Destination, "OH7LZB")
 			}
-			if p.Message != "Testing, 1 2 3" {
-				t.Errorf("message = %q, want %q", p.Message, "Testing, 1 2 3")
+			if p.Message.ID != msgid {
+				t.Errorf("messageid = %q, want %q", p.Message.ID, msgid)
 			}
-			if p.MessageAck != "" {
-				t.Errorf("messageack = %q, want empty", p.MessageAck)
+			if p.Message.Text != "Testing, 1 2 3" {
+				t.Errorf("message = %q, want %q", p.Message.Text, "Testing, 1 2 3")
+			}
+			if p.Message.AckID != "" {
+				t.Errorf("messageack = %q, want empty", p.Message.AckID)
 			}
 		})
 	}
@@ -44,7 +47,7 @@ func TestMessageReplyAckEmpty(t *testing.T) {
 	for _, msgid := range testMessageIDs {
 		t.Run(fmt.Sprintf("id_%s", msgid), func(t *testing.T) {
 			packet := fmt.Sprintf("OH7AA-1>APRS,WIDE1-1,WIDE2-2,qAo,OH7AA::OH7LZB   :Testing, 1 2 3{%s}", msgid)
-			p, err := ParseAPRS(packet)
+			p, err := Parse(packet)
 			if err != nil {
 				t.Fatalf("failed to parse message: %v", err)
 			}
@@ -54,14 +57,17 @@ func TestMessageReplyAckEmpty(t *testing.T) {
 			if p.Type != PacketTypeMessage {
 				t.Errorf("type = %q, want %q", p.Type, PacketTypeMessage)
 			}
-			if p.Destination != "OH7LZB" {
-				t.Errorf("destination = %q, want %q", p.Destination, "OH7LZB")
+			if p.Message == nil {
+				t.Fatalf("message is nil")
 			}
-			if p.MessageID != msgid {
-				t.Errorf("messageid = %q, want %q", p.MessageID, msgid)
+			if p.Message.Destination != "OH7LZB" {
+				t.Errorf("destination = %q, want %q", p.Message.Destination, "OH7LZB")
 			}
-			if p.MessageAck != "" {
-				t.Errorf("messageack = %q, want empty", p.MessageAck)
+			if p.Message.ID != msgid {
+				t.Errorf("messageid = %q, want %q", p.Message.ID, msgid)
+			}
+			if p.Message.AckID != "" {
+				t.Errorf("messageack = %q, want empty", p.Message.AckID)
 			}
 		})
 	}
@@ -72,7 +78,7 @@ func TestMessageReplyAck(t *testing.T) {
 	for _, msgid := range testMessageIDs {
 		t.Run(fmt.Sprintf("id_%s", msgid), func(t *testing.T) {
 			packet := fmt.Sprintf("OH7AA-1>APRS,WIDE1-1,WIDE2-2,qAo,OH7AA::OH7LZB   :Testing, 1 2 3{%s}f001", msgid)
-			p, err := ParseAPRS(packet)
+			p, err := Parse(packet)
 			if err != nil {
 				t.Fatalf("failed to parse message: %v", err)
 			}
@@ -82,14 +88,17 @@ func TestMessageReplyAck(t *testing.T) {
 			if p.Type != PacketTypeMessage {
 				t.Errorf("type = %q, want %q", p.Type, PacketTypeMessage)
 			}
-			if p.Destination != "OH7LZB" {
-				t.Errorf("destination = %q, want %q", p.Destination, "OH7LZB")
+			if p.Message == nil {
+				t.Fatalf("message is nil")
 			}
-			if p.MessageID != msgid {
-				t.Errorf("messageid = %q, want %q", p.MessageID, msgid)
+			if p.Message.Destination != "OH7LZB" {
+				t.Errorf("destination = %q, want %q", p.Message.Destination, "OH7LZB")
 			}
-			if p.MessageAck != "f001" {
-				t.Errorf("messageack = %q, want %q", p.MessageAck, "f001")
+			if p.Message.ID != msgid {
+				t.Errorf("messageid = %q, want %q", p.Message.ID, msgid)
+			}
+			if p.Message.AckID != "f001" {
+				t.Errorf("messageack = %q, want %q", p.Message.AckID, "f001")
 			}
 		})
 	}
@@ -99,7 +108,7 @@ func TestMessageAck(t *testing.T) {
 	for _, msgid := range testMessageIDs {
 		t.Run(fmt.Sprintf("id_%s", msgid), func(t *testing.T) {
 			packet := fmt.Sprintf("OH7AA-1>APRS,WIDE1-1,WIDE2-2,qAo,OH7AA::OH7LZB   :ack%s", msgid)
-			p, err := ParseAPRS(packet)
+			p, err := Parse(packet)
 			if err != nil {
 				t.Fatalf("failed to parse ack: %v", err)
 			}
@@ -109,11 +118,14 @@ func TestMessageAck(t *testing.T) {
 			if p.Type != PacketTypeMessage {
 				t.Errorf("type = %q, want %q", p.Type, PacketTypeMessage)
 			}
-			if p.Destination != "OH7LZB" {
-				t.Errorf("destination = %q, want %q", p.Destination, "OH7LZB")
+			if p.Message == nil {
+				t.Fatalf("message is nil")
 			}
-			if p.MessageAck != msgid {
-				t.Errorf("messageack = %q, want %q", p.MessageAck, msgid)
+			if p.Message.Destination != "OH7LZB" {
+				t.Errorf("destination = %q, want %q", p.Message.Destination, "OH7LZB")
+			}
+			if p.Message.AckID != msgid {
+				t.Errorf("messageack = %q, want %q", p.Message.AckID, msgid)
 			}
 		})
 	}
@@ -123,7 +135,7 @@ func TestMessageReject(t *testing.T) {
 	for _, msgid := range testMessageIDs {
 		t.Run(fmt.Sprintf("id_%s", msgid), func(t *testing.T) {
 			packet := fmt.Sprintf("OH7AA-1>APRS,WIDE1-1,WIDE2-2,qAo,OH7AA::OH7LZB   :rej%s", msgid)
-			p, err := ParseAPRS(packet)
+			p, err := Parse(packet)
 			if err != nil {
 				t.Fatalf("failed to parse reject: %v", err)
 			}
@@ -133,11 +145,14 @@ func TestMessageReject(t *testing.T) {
 			if p.Type != PacketTypeMessage {
 				t.Errorf("type = %q, want %q", p.Type, PacketTypeMessage)
 			}
-			if p.Destination != "OH7LZB" {
-				t.Errorf("destination = %q, want %q", p.Destination, "OH7LZB")
+			if p.Message == nil {
+				t.Fatalf("message is nil")
 			}
-			if p.MessageRej != msgid {
-				t.Errorf("messagerej = %q, want %q", p.MessageRej, msgid)
+			if p.Message.Destination != "OH7LZB" {
+				t.Errorf("destination = %q, want %q", p.Message.Destination, "OH7LZB")
+			}
+			if p.Message.RejID != msgid {
+				t.Errorf("messagerej = %q, want %q", p.Message.RejID, msgid)
 			}
 		})
 	}

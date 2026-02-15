@@ -9,7 +9,7 @@ import (
 
 func TestMicENonMoving(t *testing.T) {
 	packet := "OH7LZB-13>SX15S6,TCPIP*,qAC,FOURTH:'I',l \x1C>/]"
-	p, err := ParseAPRS(packet)
+	p, err := Parse(packet)
 	if err != nil {
 		t.Fatalf("failed to parse a non-moving target's mic-e packet: %v", err)
 	}
@@ -104,7 +104,7 @@ func TestMicENonMoving(t *testing.T) {
 
 func TestMicEMoving(t *testing.T) {
 	packet := "OH7LZB-2>TQ4W2V,WIDE2-1,qAo,OH7LZB:`c51!f?>/]\"3x}="
-	p, err := ParseAPRS(packet)
+	p, err := Parse(packet)
 	if err != nil {
 		t.Fatalf("failed to parse a moving target's mic-e: %v", err)
 	}
@@ -203,7 +203,7 @@ func TestMicEMoving(t *testing.T) {
 
 func TestMicEInvalidSymbolTable(t *testing.T) {
 	packet := "OZ2BRN-4>5U2V08,OZ3RIN-3,OZ4DIA-2*,WIDE2-1,qAR,DB0KUE:`'O<l!{,,\"4R}"
-	p, err := ParseAPRS(packet)
+	p, err := Parse(packet)
 	if err == nil {
 		t.Fatal("expected error for invalid symbol table, got nil")
 	}
@@ -234,7 +234,7 @@ func TestMicEInvalidSymbolTable(t *testing.T) {
 func TestMicEHexTelemetry5Ch(t *testing.T) {
 	// 5-channel Mic-E hex telemetry
 	packet := "OZ2BRN-4>5U2V08,WIDE2-1,qAo,OH7LZB:`c51!f?>/'102030FFff commeeeent"
-	p, err := ParseAPRS(packet)
+	p, err := Parse(packet)
 	if err != nil {
 		t.Fatalf("failed to parse mic-e packet with 5-ch telemetry: %v", err)
 	}
@@ -263,7 +263,7 @@ func TestMicEHexTelemetry5Ch(t *testing.T) {
 func TestMicEHexTelemetry2Ch(t *testing.T) {
 	// 2-channel Mic-E hex telemetry (channels 1 and 3, channel 2 is zero)
 	packet := "OZ2BRN-4>5U2V08,WIDE2-1,qAo,OH7LZB:`c51!f?>/'1020 commeeeent"
-	p, err := ParseAPRS(packet)
+	p, err := Parse(packet)
 	if err != nil {
 		t.Fatalf("failed to parse mic-e packet with 2-ch telemetry: %v", err)
 	}
@@ -293,7 +293,7 @@ func TestMicEMangled(t *testing.T) {
 	// Packet with a binary byte removed, parsed with AcceptBrokenMicE
 	comment := "]Greetings via ISS="
 	packet := "KD0KZE>TUPX9R,RS0ISS*,qAR,K0GDI-6:'yaIl -/" + comment
-	p, err := ParseAPRS(packet, Options{AcceptBrokenMicE: true})
+	p, err := Parse(packet, Options{AcceptBrokenMicE: true})
 	if err != nil {
 		t.Fatalf("failed to parse mangled mic-e packet: %v", err)
 	}

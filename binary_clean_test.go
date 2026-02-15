@@ -28,21 +28,24 @@ func testBinaryMessage(t *testing.T, setName string, content string) {
 
 	packet, message := buildBinaryMessagePacket(content)
 
-	p, err := ParseAPRS(packet)
+	p, err := Parse(packet)
 	if err != nil {
 		t.Fatalf("%s: failed to parse a message packet: %v", setName, err)
 	}
 	if p.Type != PacketTypeMessage {
 		t.Errorf("%s: wrong packet type: got %q, want %q", setName, p.Type, PacketTypeMessage)
 	}
-	if p.Destination != "OH7LZB" {
-		t.Errorf("%s: wrong message dst callsign: got %q, want %q", setName, p.Destination, "OH7LZB")
+	if p.Message == nil {
+		t.Fatalf("%s: message is nil", setName)
 	}
-	if p.MessageID != "42" {
-		t.Errorf("%s: wrong message id: got %q, want %q", setName, p.MessageID, "42")
+	if p.Message.Destination != "OH7LZB" {
+		t.Errorf("%s: wrong message dst callsign: got %q, want %q", setName, p.Message.Destination, "OH7LZB")
 	}
-	if p.Message != message {
-		t.Errorf("%s: wrong message: got %q, want %q", setName, p.Message, message)
+	if p.Message.ID != "42" {
+		t.Errorf("%s: wrong message id: got %q, want %q", setName, p.Message.ID, "42")
+	}
+	if p.Message.Text != message {
+		t.Errorf("%s: wrong message: got %q, want %q", setName, p.Message.Text, message)
 	}
 }
 
