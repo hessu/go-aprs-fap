@@ -4,141 +4,91 @@ import (
 	"testing"
 )
 
-func TestMakePositionBasicNE(t *testing.T) {
-	result, err := MakePosition(63.06716666666667, 27.6605, nil, nil, nil, "/#", nil)
-	if err != nil {
-		t.Fatalf("MakePosition failed: %v", err)
-	}
-	expected := "!6304.03N/02739.63E#"
-	if result != expected {
-		t.Errorf("got %q, expected %q", result, expected)
-	}
-}
+// Tests ported from perl-aprs-fap/t/80make-position.t
 
-func TestMakePositionBasicSW(t *testing.T) {
-	result, err := MakePosition(-23.64266666666667, -46.797, nil, nil, nil, "/#", nil)
-	if err != nil {
-		t.Fatalf("MakePosition failed: %v", err)
+func TestMakePosition(t *testing.T) {
+	tests := []struct {
+		name     string
+		lat, lon float64
+		speed    *float64
+		course   *float64
+		altitude *float64
+		symbol   string
+		opts     *MakePositionOpts
+		want     string
+	}{
+		{
+			"basic NE, no speed/course/alt",
+			63.06716666666667, 27.6605, nil, nil, nil, "/#", nil,
+			"!6304.03N/02739.63E#",
+		},
+		{
+			"basic SW, no speed/course/alt",
+			-23.64266666666667, -46.797, nil, nil, nil, "/#", nil,
+			"!2338.56S/04647.82W#",
+		},
+		{
+			"minute rounding, no speed/course/alt",
+			22.9999999, -177.9999999, nil, nil, nil, "/#", nil,
+			"!2259.99N/17759.99W#",
+		},
+		{
+			"NE, has speed/course/alt",
+			52.364, 14.1045, floatPtr(83.34), floatPtr(353), floatPtr(95.7072), "/>", nil,
+			"!5221.84N/01406.27E>353/045/A=000314",
+		},
+		{
+			"NE, no speed/course, has alt",
+			52.364, 14.1045, nil, nil, floatPtr(95.7072), "/>", nil,
+			"!5221.84N/01406.27E>/A=000314",
+		},
+		{
+			"NE, ambiguity 1",
+			52.364, 14.1045, nil, nil, nil, "/>", &MakePositionOpts{Ambiguity: 1},
+			"!5221.8 N/01406.2 E>",
+		},
+		{
+			"NE, ambiguity 2",
+			52.364, 14.1045, nil, nil, nil, "/>", &MakePositionOpts{Ambiguity: 2},
+			"!5221.  N/01406.  E>",
+		},
+		{
+			"NE, ambiguity 3",
+			52.364, 14.1045, nil, nil, nil, "/>", &MakePositionOpts{Ambiguity: 3},
+			"!522 .  N/0140 .  E>",
+		},
+		{
+			"NE, ambiguity 4",
+			52.364, 14.1045, nil, nil, nil, "/>", &MakePositionOpts{Ambiguity: 4},
+			"!52  .  N/014  .  E>",
+		},
+		{
+			"DAO position, US",
+			39.15380036630037, -84.62208058608059, nil, nil, nil, "/>", &MakePositionOpts{DAO: true},
+			"!3909.22N/08437.32W>!wjM!",
+		},
+		{
+			"DAO rounding",
+			39.9999999, -84.9999999, nil, nil, nil, "/>", &MakePositionOpts{DAO: true},
+			"!3959.99N/08459.99W>!w{{!",
+		},
+		{
+			"DAO with speed/course/alt/comment",
+			48.37314835164835, 15.71477838827839, floatPtr(62.968), floatPtr(321), floatPtr(192.9384), "/>",
+			&MakePositionOpts{DAO: true, Comment: "Comment blah"},
+			"!4822.38N/01542.88E>321/034/A=000633Comment blah!wr^!",
+		},
 	}
-	expected := "!2338.56S/04647.82W#"
-	if result != expected {
-		t.Errorf("got %q, expected %q", result, expected)
-	}
-}
 
-func TestMakePositionMinuteRounding(t *testing.T) {
-	result, err := MakePosition(22.9999999, -177.9999999, nil, nil, nil, "/#", nil)
-	if err != nil {
-		t.Fatalf("MakePosition failed: %v", err)
-	}
-	expected := "!2259.99N/17759.99W#"
-	if result != expected {
-		t.Errorf("got %q, expected %q", result, expected)
-	}
-}
-
-func TestMakePositionWithSpeedCourseAlt(t *testing.T) {
-	speed := 83.34
-	course := 353.0
-	alt := 95.7072
-	result, err := MakePosition(52.364, 14.1045, &speed, &course, &alt, "/>", nil)
-	if err != nil {
-		t.Fatalf("MakePosition failed: %v", err)
-	}
-	expected := "!5221.84N/01406.27E>353/045/A=000314"
-	if result != expected {
-		t.Errorf("got %q, expected %q", result, expected)
-	}
-}
-
-func TestMakePositionWithAltOnly(t *testing.T) {
-	alt := 95.7072
-	result, err := MakePosition(52.364, 14.1045, nil, nil, &alt, "/>", nil)
-	if err != nil {
-		t.Fatalf("MakePosition failed: %v", err)
-	}
-	expected := "!5221.84N/01406.27E>/A=000314"
-	if result != expected {
-		t.Errorf("got %q, expected %q", result, expected)
-	}
-}
-
-func TestMakePositionAmbiguity1(t *testing.T) {
-	result, err := MakePosition(52.364, 14.1045, nil, nil, nil, "/>", &MakePositionOpts{Ambiguity: 1})
-	if err != nil {
-		t.Fatalf("MakePosition failed: %v", err)
-	}
-	expected := "!5221.8 N/01406.2 E>"
-	if result != expected {
-		t.Errorf("got %q, expected %q", result, expected)
-	}
-}
-
-func TestMakePositionAmbiguity2(t *testing.T) {
-	result, err := MakePosition(52.364, 14.1045, nil, nil, nil, "/>", &MakePositionOpts{Ambiguity: 2})
-	if err != nil {
-		t.Fatalf("MakePosition failed: %v", err)
-	}
-	expected := "!5221.  N/01406.  E>"
-	if result != expected {
-		t.Errorf("got %q, expected %q", result, expected)
-	}
-}
-
-func TestMakePositionAmbiguity3(t *testing.T) {
-	result, err := MakePosition(52.364, 14.1045, nil, nil, nil, "/>", &MakePositionOpts{Ambiguity: 3})
-	if err != nil {
-		t.Fatalf("MakePosition failed: %v", err)
-	}
-	expected := "!522 .  N/0140 .  E>"
-	if result != expected {
-		t.Errorf("got %q, expected %q", result, expected)
-	}
-}
-
-func TestMakePositionAmbiguity4(t *testing.T) {
-	result, err := MakePosition(52.364, 14.1045, nil, nil, nil, "/>", &MakePositionOpts{Ambiguity: 4})
-	if err != nil {
-		t.Fatalf("MakePosition failed: %v", err)
-	}
-	expected := "!52  .  N/014  .  E>"
-	if result != expected {
-		t.Errorf("got %q, expected %q", result, expected)
-	}
-}
-
-func TestMakePositionDAO_US(t *testing.T) {
-	result, err := MakePosition(39.15380036630037, -84.62208058608059, nil, nil, nil, "/>", &MakePositionOpts{DAO: true})
-	if err != nil {
-		t.Fatalf("MakePosition failed: %v", err)
-	}
-	expected := "!3909.22N/08437.32W>!wjM!"
-	if result != expected {
-		t.Errorf("got %q, expected %q", result, expected)
-	}
-}
-
-func TestMakePositionDAORounding(t *testing.T) {
-	result, err := MakePosition(39.9999999, -84.9999999, nil, nil, nil, "/>", &MakePositionOpts{DAO: true})
-	if err != nil {
-		t.Fatalf("MakePosition failed: %v", err)
-	}
-	expected := "!3959.99N/08459.99W>!w{{!"
-	if result != expected {
-		t.Errorf("got %q, expected %q", result, expected)
-	}
-}
-
-func TestMakePositionDAOWithSpeedCourseAltComment(t *testing.T) {
-	speed := 62.968
-	course := 321.0
-	alt := 192.9384
-	result, err := MakePosition(48.37314835164835, 15.71477838827839, &speed, &course, &alt, "/>", &MakePositionOpts{DAO: true, Comment: "Comment blah"})
-	if err != nil {
-		t.Fatalf("MakePosition failed: %v", err)
-	}
-	expected := "!4822.38N/01542.88E>321/034/A=000633Comment blah!wr^!"
-	if result != expected {
-		t.Errorf("got %q, expected %q", result, expected)
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			got, err := MakePosition(tc.lat, tc.lon, tc.speed, tc.course, tc.altitude, tc.symbol, tc.opts)
+			if err != nil {
+				t.Fatalf("MakePosition failed: %v", err)
+			}
+			if got != tc.want {
+				t.Errorf("got %q, want %q", got, tc.want)
+			}
+		})
 	}
 }
