@@ -280,10 +280,11 @@ func (p *Packet) parseHeader(opt *options) error {
 		return p.fail(ErrDstPathTooMany, "too many path components for AX.25")
 	}
 
-	p.DstCallsign = parts[0]
-
-	if len(p.DstCallsign) == 0 {
-		return p.fail(ErrDstCallEmpty, "destination callsign is empty")
+	// Destination callsign is always validated as AX.25 — there should be
+	// no need to use a non-AX.25 compatible destination callsign.
+	p.DstCallsign = CheckAX25Call(parts[0])
+	if p.DstCallsign == "" {
+		return p.fail(ErrDstCallNoAX25, "destination callsign is not a valid AX.25 call")
 	}
 
 	// Parse digipeaters

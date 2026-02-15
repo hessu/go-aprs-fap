@@ -66,6 +66,24 @@ func TestWithAX25(t *testing.T) {
 			wantDst:   "APRS",
 			wantDigis: nil,
 		},
+		{
+			name:     "invalid AX.25 destination callsign",
+			packet:   "OH7LZB>TOOLONGDST:>status",
+			wantErr:  true,
+			wantCode: ErrDstCallNoAX25,
+		},
+		{
+			name:     "destination SSID too large for AX.25",
+			packet:   "OH7LZB>APRS-16:>status",
+			wantErr:  true,
+			wantCode: ErrDstCallNoAX25,
+		},
+		{
+			name:    "destination callsign normalized to uppercase",
+			packet:  "OH7LZB>aprs:>status",
+			wantSrc: "OH7LZB",
+			wantDst: "APRS",
+		},
 	}
 
 	for _, tc := range tests {
@@ -104,5 +122,17 @@ func TestWithAX25(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+func TestDstCallNoAX25WithoutOption(t *testing.T) {
+	// Destination callsign is always validated as AX.25, even without WithAX25()
+	packet := "OH7LZB>TOOLONGDST:>status"
+	p, err := Parse(packet)
+	if err == nil {
+		t.Fatalf("expected error, got nil")
+	}
+	if p.ResultCode != ErrDstCallNoAX25 {
+		t.Errorf("ResultCode = %q, want %q", p.ResultCode, ErrDstCallNoAX25)
 	}
 }
