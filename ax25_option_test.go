@@ -7,13 +7,13 @@ import (
 
 func TestWithAX25(t *testing.T) {
 	tests := []struct {
-		name       string
-		packet     string
-		wantErr    bool
-		wantCode   *ParseError
-		wantSrc    string
-		wantDst    string
-		wantDigis  []string
+		name      string
+		packet    string
+		wantErr   bool
+		wantCode  *ParseError
+		wantSrc   string
+		wantDst   string
+		wantDigis []string
 	}{
 		{
 			name:      "valid AX.25 packet",
