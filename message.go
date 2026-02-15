@@ -6,7 +6,7 @@ import (
 
 // parseMessage parses an APRS message packet.
 // Format: :ADDRESSEE:message text{XXXXX
-func (p *Packet) parseMessage(opt Options) error {
+func (p *Packet) parseMessage(opt *Options) error {
 	p.Type = PacketTypeMessage
 
 	body := p.Body[1:] // skip ':'

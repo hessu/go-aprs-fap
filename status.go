@@ -6,7 +6,7 @@ import (
 
 // parseStatus parses an APRS status report.
 // Format: >DDHHMMzstatus text  or  >status text
-func (p *Packet) parseStatus(opt Options) error {
+func (p *Packet) parseStatus(opt *Options) error {
 	p.Type = PacketTypeStatus
 
 	body := p.Body[1:] // skip '>'
@@ -30,7 +30,7 @@ func (p *Packet) parseStatus(opt Options) error {
 
 // parseCapabilities parses an APRS station capabilities packet.
 // Format: <cap1=val1,cap2=val2,...
-func (p *Packet) parseCapabilities(opt Options) error {
+func (p *Packet) parseCapabilities(opt *Options) error {
 	p.Type = PacketTypeCapabilities
 	p.Capabilities = make(map[string]string)
 

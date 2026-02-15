@@ -13,7 +13,7 @@ func TestMessageNormal(t *testing.T) {
 	for _, msgid := range testMessageIDs {
 		t.Run(fmt.Sprintf("id_%s", msgid), func(t *testing.T) {
 			packet := fmt.Sprintf("OH7AA-1>APRS,WIDE1-1,WIDE2-2,qAo,OH7AA::OH7LZB   :Testing, 1 2 3{%s", msgid)
-			p, err := Parse(packet)
+			p, err := Parse(packet, nil)
 			if err != nil {
 				t.Fatalf("failed to parse message: %v", err)
 			}
@@ -47,7 +47,7 @@ func TestMessageReplyAckEmpty(t *testing.T) {
 	for _, msgid := range testMessageIDs {
 		t.Run(fmt.Sprintf("id_%s", msgid), func(t *testing.T) {
 			packet := fmt.Sprintf("OH7AA-1>APRS,WIDE1-1,WIDE2-2,qAo,OH7AA::OH7LZB   :Testing, 1 2 3{%s}", msgid)
-			p, err := Parse(packet)
+			p, err := Parse(packet, nil)
 			if err != nil {
 				t.Fatalf("failed to parse message: %v", err)
 			}
@@ -78,7 +78,7 @@ func TestMessageReplyAck(t *testing.T) {
 	for _, msgid := range testMessageIDs {
 		t.Run(fmt.Sprintf("id_%s", msgid), func(t *testing.T) {
 			packet := fmt.Sprintf("OH7AA-1>APRS,WIDE1-1,WIDE2-2,qAo,OH7AA::OH7LZB   :Testing, 1 2 3{%s}f001", msgid)
-			p, err := Parse(packet)
+			p, err := Parse(packet, nil)
 			if err != nil {
 				t.Fatalf("failed to parse message: %v", err)
 			}
@@ -108,7 +108,7 @@ func TestMessageAck(t *testing.T) {
 	for _, msgid := range testMessageIDs {
 		t.Run(fmt.Sprintf("id_%s", msgid), func(t *testing.T) {
 			packet := fmt.Sprintf("OH7AA-1>APRS,WIDE1-1,WIDE2-2,qAo,OH7AA::OH7LZB   :ack%s", msgid)
-			p, err := Parse(packet)
+			p, err := Parse(packet, nil)
 			if err != nil {
 				t.Fatalf("failed to parse ack: %v", err)
 			}
@@ -135,7 +135,7 @@ func TestMessageReject(t *testing.T) {
 	for _, msgid := range testMessageIDs {
 		t.Run(fmt.Sprintf("id_%s", msgid), func(t *testing.T) {
 			packet := fmt.Sprintf("OH7AA-1>APRS,WIDE1-1,WIDE2-2,qAo,OH7AA::OH7LZB   :rej%s", msgid)
-			p, err := Parse(packet)
+			p, err := Parse(packet, nil)
 			if err != nil {
 				t.Fatalf("failed to parse reject: %v", err)
 			}

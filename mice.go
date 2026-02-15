@@ -54,7 +54,7 @@ var micEDestTable = map[byte]micEDestInfo{
 }
 
 // parseMicE parses a Mic-E encoded packet.
-func (p *Packet) parseMicE(opt Options) error {
+func (p *Packet) parseMicE(opt *Options) error {
 	p.Type = PacketTypeLocation
 	p.Format = FormatMicE
 
@@ -397,7 +397,7 @@ func MicEMBitsToMessage(mbits string) string {
 // collapses multiple spaces into one, losing a byte. This function detects
 // that pattern, inserts the missing space, then parses position and symbol
 // normally (but skips speed/course since they are unreliable).
-func (p *Packet) parseMicEMangled(opt Options) error {
+func (p *Packet) parseMicEMangled(opt *Options) error {
 	body := p.Body[1:]
 	dst := p.DstCallsign
 

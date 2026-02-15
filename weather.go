@@ -8,7 +8,7 @@ import (
 
 // parseWeatherPositionless parses a positionless weather report.
 // Format: _MMDDHHMM weather data...
-func (p *Packet) parseWeatherPositionless(opt Options) error {
+func (p *Packet) parseWeatherPositionless(opt *Options) error {
 	p.Type = PacketTypeWx
 
 	body := p.Body[1:] // skip '_'
@@ -346,7 +346,7 @@ func ultwTemp(val int) float64 {
 // Field order: wind_gust, wind_direction, temp, rain_midnight, pressure,
 // skip(baro_delta), skip(baro_corr_lsw), skip(baro_corr_msw),
 // humidity, skip(date), skip(time), rain_midnight(overwrite), wind_speed
-func (p *Packet) parseULTW(opt Options) error {
+func (p *Packet) parseULTW(opt *Options) error {
 	p.Type = PacketTypeWx
 
 	body := p.Body[5:] // skip '$ULTW'
@@ -416,7 +416,7 @@ func (p *Packet) parseULTW(opt Options) error {
 // Field order: wind_speed(instant), wind_direction, temp, rain_midnight,
 // pressure, temp_in, humidity, humidity_in, skip(date), skip(time),
 // rain_midnight(overwrite), wind_speed(avg, overwrites instant)
-func (p *Packet) parseULTWLogging(opt Options) error {
+func (p *Packet) parseULTWLogging(opt *Options) error {
 	p.Type = PacketTypeWx
 
 	body := p.Body[2:] // skip '!!'

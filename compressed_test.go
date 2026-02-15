@@ -12,7 +12,7 @@ func TestCompressedNonMoving(t *testing.T) {
 	body := "!I0-X;T_Wv&{-Aigate testing"
 	packet := header + ":" + body
 
-	p, err := Parse(packet)
+	p, err := Parse(packet, nil)
 	if err != nil {
 		t.Fatalf("failed to parse: %v", err)
 	}
@@ -107,7 +107,7 @@ func TestCompressedMoving(t *testing.T) {
 	body := "!//zPHTfVv>!V_ " + comment + "|!!!!!!!!!!!!!!|"
 	packet := header + ":" + body
 
-	p, err := Parse(packet)
+	p, err := Parse(packet, nil)
 	if err != nil {
 		t.Fatalf("failed to parse: %v", err)
 	}
@@ -199,7 +199,7 @@ func TestCompressedTooShort(t *testing.T) {
 	// Must not decode, even though this packet is otherwise valid.
 	packet := "KJ4ERJ-AL>APWW05,TCPIP*,qAC,FOURTH:@075111h/@@.Y:*lol "
 
-	_, err := Parse(packet)
+	_, err := Parse(packet, nil)
 	if err == nil {
 		t.Fatal("expected error for too-short compressed packet")
 	}
@@ -209,7 +209,7 @@ func TestCompressedWeather(t *testing.T) {
 	// Compressed packet with weather data
 	packet := "SV4IKL-2>APU25N,WIDE2-2,qAR,SV6EXB-1:@011444z/:JF!T/W-_e!bg001t054r000p010P010h65b10073WS 2300 {UIV32N}"
 
-	p, err := Parse(packet)
+	p, err := Parse(packet, nil)
 	if err != nil {
 		t.Fatalf("failed to parse: %v", err)
 	}
@@ -261,7 +261,7 @@ func TestCompressedWeatherSpaceGust(t *testing.T) {
 	// Compressed packet with weather, space in wind gust field
 	packet := "SV4IKL-2>APU25N,WIDE2-2,qAR,SV6EXB-1:@011444z/:JF!T/W-_e!bg   t054r000p010P010h65b10073WS 2300 {UIV32N}"
 
-	p, err := Parse(packet)
+	p, err := Parse(packet, nil)
 	if err != nil {
 		t.Fatalf("failed to parse: %v", err)
 	}

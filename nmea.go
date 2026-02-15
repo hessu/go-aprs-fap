@@ -10,7 +10,7 @@ import (
 
 // parseNMEA parses NMEA GPS data packets.
 // Supported: $GPRMC, $GPGGA, $GPGLL
-func (p *Packet) parseNMEA(opt Options) error {
+func (p *Packet) parseNMEA(opt *Options) error {
 	p.Type = PacketTypeLocation
 	p.Format = FormatNMEA
 

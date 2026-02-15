@@ -12,7 +12,7 @@ func TestObjectCompressed(t *testing.T) {
 	// OH2KKU-1>APRS,TCPIP*,qAC,FIRST:;SRAL HQ  *100927zS0%E/Th4_a  AKaupinmaenpolku9,open M-Th12-17,F12-14 lcl
 	packet := "OH2KKU-1>APRS,TCPIP*,qAC,FIRST:;SRAL HQ  *100927zS0%E/Th4_a  AKaupinmaenpolku9,open M-Th12-17,F12-14 lcl"
 
-	p, err := Parse(packet)
+	p, err := Parse(packet, nil)
 	if err != nil {
 		t.Fatalf("failed to parse object packet: %v", err)
 	}
@@ -70,7 +70,7 @@ func TestObjectUncompressed(t *testing.T) {
 	// Regular APRS uncompressed position object
 	packet := "OH2KKU-1>APRS:;LEADER   *092345z4903.50N/07201.75W>088/036"
 
-	p, err := Parse(packet)
+	p, err := Parse(packet, nil)
 	if err != nil {
 		t.Fatalf("failed to parse object packet: %v", err)
 	}
@@ -119,7 +119,7 @@ func TestObjectKilled(t *testing.T) {
 	// Killed object (underscore instead of asterisk)
 	packet := "OH2KKU-1>APRS:;LEADER   _092345z4903.50N/07201.75W>088/036"
 
-	p, err := Parse(packet)
+	p, err := Parse(packet, nil)
 	if err != nil {
 		t.Fatalf("failed to parse killed object packet: %v", err)
 	}

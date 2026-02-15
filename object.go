@@ -6,7 +6,7 @@ import (
 
 // parseObject parses an APRS object packet.
 // Format: ;OBJNAME  *DDMMSS/LATITUDE/LONGITUDEsymbol...
-func (p *Packet) parseObject(opt Options) error {
+func (p *Packet) parseObject(opt *Options) error {
 	p.Type = PacketTypeObject
 
 	body := p.Body[1:] // skip ';'
@@ -52,7 +52,7 @@ func (p *Packet) parseObject(opt Options) error {
 
 // parseItem parses an APRS item packet.
 // Format: )ITEMNAME!LATITUDE/LONGITUDEsymbol...
-func (p *Packet) parseItem(opt Options) error {
+func (p *Packet) parseItem(opt *Options) error {
 	p.Type = PacketTypeItem
 
 	body := p.Body[1:] // skip ')'

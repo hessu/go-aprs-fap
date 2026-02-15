@@ -187,10 +187,9 @@ type Options struct {
 // Parse parses an APRS packet in TNC2 / APRS-IS text format.
 // It returns a Packet struct with all parsed fields populated.
 // If parsing fails, the returned Packet will have ResultCode and ResultMsg set.
-func Parse(raw string, opts ...Options) (*Packet, error) {
-	var opt Options
-	if len(opts) > 0 {
-		opt = opts[0]
+func Parse(raw string, opt *Options) (*Packet, error) {
+	if opt == nil {
+		opt = &Options{}
 	}
 
 	p := &Packet{
@@ -231,7 +230,7 @@ func (p *Packet) fail(code, msg string) error {
 }
 
 // parseHeader parses the packet header into source, destination, and digipeaters.
-func (p *Packet) parseHeader(opt Options) error {
+func (p *Packet) parseHeader(opt *Options) error {
 	// Split at '>'
 	gtIdx := strings.IndexByte(p.Header, '>')
 	if gtIdx < 0 {
@@ -293,7 +292,7 @@ func (p *Packet) parseHeader(opt Options) error {
 }
 
 // parseBody dispatches body parsing based on the packet type identifier.
-func (p *Packet) parseBody(opt Options) error {
+func (p *Packet) parseBody(opt *Options) error {
 	if len(p.Body) == 0 {
 		return p.fail("packet_no_body", "packet body is empty")
 	}

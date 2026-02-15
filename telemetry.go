@@ -11,7 +11,7 @@ var telemetryValueRe = regexp.MustCompile(`^-?[0-9]*\.?[0-9]+$`)
 
 // parseTelemetry parses an APRS telemetry packet.
 // Format: T#seq,a1,a2,a3,a4,a5,bbbbbbbb
-func (p *Packet) parseTelemetry(opt Options) error {
+func (p *Packet) parseTelemetry(opt *Options) error {
 	p.Type = PacketTypeTelemetry
 
 	body := p.Body[2:] // skip 'T#'

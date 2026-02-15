@@ -8,7 +8,7 @@ import (
 )
 
 // parsePositionNoTimestamp parses position packets without timestamps (! and =).
-func (p *Packet) parsePositionNoTimestamp(opt Options, typeChar byte) error {
+func (p *Packet) parsePositionNoTimestamp(opt *Options, typeChar byte) error {
 	p.Type = PacketTypeLocation
 
 	// '=' indicates messaging capability
@@ -34,7 +34,7 @@ func (p *Packet) parsePositionNoTimestamp(opt Options, typeChar byte) error {
 }
 
 // parsePositionWithTimestamp parses position packets with timestamps (/ and @).
-func (p *Packet) parsePositionWithTimestamp(opt Options, typeChar byte) error {
+func (p *Packet) parsePositionWithTimestamp(opt *Options, typeChar byte) error {
 	p.Type = PacketTypeLocation
 
 	if typeChar == '@' {
@@ -74,7 +74,7 @@ func (p *Packet) parsePositionWithTimestamp(opt Options, typeChar byte) error {
 }
 
 // parseUncompressedPosition parses an uncompressed position report.
-func (p *Packet) parseUncompressedPosition(body string, opt Options) error {
+func (p *Packet) parseUncompressedPosition(body string, opt *Options) error {
 	p.Format = FormatUncompressed
 
 	if len(body) < 19 {
@@ -126,7 +126,7 @@ func isValidSymbolTable(c byte) bool {
 }
 
 // parseCompressedPosition parses a compressed position report.
-func (p *Packet) parseCompressedPosition(body string, opt Options) error {
+func (p *Packet) parseCompressedPosition(body string, opt *Options) error {
 	p.Format = FormatCompressed
 
 	if len(body) < 13 {
@@ -374,7 +374,7 @@ func (p *Packet) applyBase91DAO(d1, d2 byte) {
 }
 
 // parsePositionFallback tries a last-resort position parse (looking for '!' in body).
-func (p *Packet) parsePositionFallback(opt Options) error {
+func (p *Packet) parsePositionFallback(opt *Options) error {
 	idx := strings.IndexByte(p.Body, '!')
 	if idx < 0 {
 		return p.fail(ErrTypeNotSupported, "unsupported packet type")

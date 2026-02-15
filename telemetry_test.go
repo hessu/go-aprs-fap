@@ -12,7 +12,7 @@ func floatPtr(v float64) *float64 {
 
 func TestTelemetryClassic(t *testing.T) {
 	// Classic packet with one floating point value
-	p, err := Parse("SRCCALL>APRS:T#324,000,038,255,.12,50.12,01000001")
+	p, err := Parse("SRCCALL>APRS:T#324,000,038,255,.12,50.12,01000001", nil)
 	if err != nil {
 		t.Fatalf("failed to parse telemetry packet: %v", err)
 	}
@@ -46,7 +46,7 @@ func TestTelemetryClassic(t *testing.T) {
 
 func TestTelemetryRelaxed(t *testing.T) {
 	// Floating-point and negative values (relaxed rules)
-	p, err := Parse("SRCCALL>APRS:T#1,-1,2147483647,-2147483648,0.000001,-0.0000001,01000001 comment")
+	p, err := Parse("SRCCALL>APRS:T#1,-1,2147483647,-2147483648,0.000001,-0.0000001,01000001 comment", nil)
 	if err != nil {
 		t.Fatalf("failed to parse relaxed telemetry: %v", err)
 	}
@@ -77,7 +77,7 @@ func TestTelemetryRelaxed(t *testing.T) {
 
 func TestTelemetryShort(t *testing.T) {
 	// Very short telemetry packet (only one value)
-	p, err := Parse("SRCCALL>APRS:T#001,42")
+	p, err := Parse("SRCCALL>APRS:T#001,42", nil)
 	if err != nil {
 		t.Fatalf("failed to parse short telemetry: %v", err)
 	}
@@ -110,7 +110,7 @@ func TestTelemetryShort(t *testing.T) {
 
 func TestTelemetryUndefinedMiddle(t *testing.T) {
 	// Undefined values in the middle
-	p, err := Parse("SRCCALL>APRS:T#1,1,,3,,5")
+	p, err := Parse("SRCCALL>APRS:T#1,1,,3,,5", nil)
 	if err != nil {
 		t.Fatalf("failed to parse telemetry with undefined middle: %v", err)
 	}
@@ -149,7 +149,7 @@ func TestTelemetryUndefinedMiddle(t *testing.T) {
 
 func TestTelemetryPartiallyCorrect(t *testing.T) {
 	// Parsing ends at 'f' since it may be a comment
-	p, err := Parse("SRCCALL>APRS:T#1,1,f,3")
+	p, err := Parse("SRCCALL>APRS:T#1,1,f,3", nil)
 	if err != nil {
 		t.Fatalf("failed to parse partially correct telemetry: %v", err)
 	}
@@ -171,11 +171,11 @@ func TestTelemetryPartiallyCorrect(t *testing.T) {
 
 func TestTelemetryInvalidDash(t *testing.T) {
 	// Invalid: bare '-' with no number
-	_, err := Parse("SRCCALL>APRS:T#1,1,-,3")
+	_, err := Parse("SRCCALL>APRS:T#1,1,-,3", nil)
 	if err == nil {
 		t.Fatal("expected error for invalid telemetry with bare dash")
 	}
-	p, _ := Parse("SRCCALL>APRS:T#1,1,-,3")
+	p, _ := Parse("SRCCALL>APRS:T#1,1,-,3", nil)
 	if p.ResultCode != "tlm_inv" {
 		t.Errorf("resultcode = %q, want %q", p.ResultCode, "tlm_inv")
 	}
@@ -183,11 +183,11 @@ func TestTelemetryInvalidDash(t *testing.T) {
 
 func TestTelemetryInvalidTrailingDot(t *testing.T) {
 	// Invalid: trailing dot after number
-	_, err := Parse("SRCCALL>APRS:T#1,1,-1.,3")
+	_, err := Parse("SRCCALL>APRS:T#1,1,-1.,3", nil)
 	if err == nil {
 		t.Fatal("expected error for invalid telemetry with trailing dot")
 	}
-	p, _ := Parse("SRCCALL>APRS:T#1,1,-1.,3")
+	p, _ := Parse("SRCCALL>APRS:T#1,1,-1.,3", nil)
 	if p.ResultCode != "tlm_inv" {
 		t.Errorf("resultcode = %q, want %q", p.ResultCode, "tlm_inv")
 	}
