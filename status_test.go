@@ -8,6 +8,25 @@ import (
 
 // Tests ported from perl-aprs-fap/t/56decode-status.t
 
+// TestParseCapabilities tests capabilities parsing.
+func TestParseCapabilities(t *testing.T) {
+	packet := "OH7LZB>APRS:<IGATE,MSG_CNT=5,LOC_CNT=10"
+	p, err := Parse(packet)
+	if err != nil {
+		t.Fatalf("failed to parse capabilities: %v", err)
+	}
+
+	if p.Type != PacketTypeCapabilities {
+		t.Errorf("type: got %q, want %q", p.Type, PacketTypeCapabilities)
+	}
+	if v, ok := p.Capabilities["MSG_CNT"]; !ok || v != "5" {
+		t.Errorf("MSG_CNT: got %q, want %q", v, "5")
+	}
+	if _, ok := p.Capabilities["IGATE"]; !ok {
+		t.Error("IGATE capability not found")
+	}
+}
+
 func TestStatusWithTimestamp(t *testing.T) {
 	// Build a timestamp from the current time, matching the Perl test.
 	// The status message's timestamp is not affected by the raw_timestamp flag.
