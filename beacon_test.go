@@ -11,7 +11,7 @@ func TestBeaconNonAPRS(t *testing.T) {
 	// Should fail to parse but still populate header fields.
 	packet := "OH2RDU>UIDIGI: UIDIGI 1.9"
 
-	p, err := Parse(packet, nil)
+	p, err := Parse(packet)
 	if err == nil {
 		t.Fatal("expected error for non-APRS beacon packet")
 	}

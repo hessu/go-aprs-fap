@@ -172,24 +172,38 @@ type Packet struct {
 	ResultMsg  string // Human-readable error message
 }
 
-// Options configures parsing behavior.
-type Options struct {
-	// IsAX25 validates the packet against AX.25 rules.
-	IsAX25 bool
+// options holds internal parsing configuration.
+type options struct {
+	isAX25           bool
+	acceptBrokenMicE bool
+	rawTimestamp     bool
+}
 
-	// AcceptBrokenMicE attempts to fix corrupted mic-e packets.
-	AcceptBrokenMicE bool
+// Option configures parsing behavior.
+type Option func(*options)
 
-	// RawTimestamp returns timestamps as raw strings instead of time.Time.
-	RawTimestamp bool
+// WithAX25 validates the packet against AX.25 rules.
+func WithAX25() Option {
+	return func(o *options) { o.isAX25 = true }
+}
+
+// WithAcceptBrokenMicE attempts to fix corrupted mic-e packets.
+func WithAcceptBrokenMicE() Option {
+	return func(o *options) { o.acceptBrokenMicE = true }
+}
+
+// WithRawTimestamp returns timestamps as raw strings instead of time.Time.
+func WithRawTimestamp() Option {
+	return func(o *options) { o.rawTimestamp = true }
 }
 
 // Parse parses an APRS packet in TNC2 / APRS-IS text format.
 // It returns a Packet struct with all parsed fields populated.
 // If parsing fails, the returned Packet will have ResultCode and ResultMsg set.
-func Parse(raw string, opt *Options) (*Packet, error) {
-	if opt == nil {
-		opt = &Options{}
+func Parse(raw string, opts ...Option) (*Packet, error) {
+	var opt options
+	for _, o := range opts {
+		o(&opt)
 	}
 
 	p := &Packet{
@@ -210,12 +224,12 @@ func Parse(raw string, opt *Options) (*Packet, error) {
 	}
 
 	// Parse header: SRC>DST,DIGI1,DIGI2,...
-	if err := p.parseHeader(opt); err != nil {
+	if err := p.parseHeader(&opt); err != nil {
 		return p, err
 	}
 
 	// Determine packet type from the first character(s) of the body
-	if err := p.parseBody(opt); err != nil {
+	if err := p.parseBody(&opt); err != nil {
 		return p, err
 	}
 
@@ -230,7 +244,7 @@ func (p *Packet) fail(code, msg string) error {
 }
 
 // parseHeader parses the packet header into source, destination, and digipeaters.
-func (p *Packet) parseHeader(opt *Options) error {
+func (p *Packet) parseHeader(opt *options) error {
 	// Split at '>'
 	gtIdx := strings.IndexByte(p.Header, '>')
 	if gtIdx < 0 {
@@ -292,7 +306,7 @@ func (p *Packet) parseHeader(opt *Options) error {
 }
 
 // parseBody dispatches body parsing based on the packet type identifier.
-func (p *Packet) parseBody(opt *Options) error {
+func (p *Packet) parseBody(opt *options) error {
 	if len(p.Body) == 0 {
 		return p.fail("packet_no_body", "packet body is empty")
 	}
@@ -315,7 +329,7 @@ func (p *Packet) parseBody(opt *Options) error {
 	case '\'', '`':
 		// Mic-E
 		err := p.parseMicE(opt)
-		if err != nil && opt.AcceptBrokenMicE {
+		if err != nil && opt.acceptBrokenMicE {
 			// Reset fields that parseMicE may have partially set
 			p.ResultCode = ""
 			p.ResultMsg = ""

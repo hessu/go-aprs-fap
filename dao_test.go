@@ -10,7 +10,7 @@ import (
 func TestDAOUncompressedHumanReadable(t *testing.T) {
 	// Uncompressed packet with human-readable DAO, DAO in beginning of comment
 	packet := "K0ELR-15>APOT02,WIDE1-1,WIDE2-1,qAo,K0ELR:/102033h4133.03NX09029.49Wv204/000!W33! 12.3V 21C/A=000665"
-	p, err := Parse(packet, nil)
+	p, err := Parse(packet)
 	if err != nil {
 		t.Fatalf("failed to parse an uncompressed packet with WGS84 human-readable DAO: %v", err)
 	}
@@ -50,7 +50,7 @@ func TestDAOUncompressedHumanReadable(t *testing.T) {
 func TestDAOCompressedBase91(t *testing.T) {
 	// Compressed packet with BASE91 DAO, DAO in end of comment
 	packet := "OH7LZB-9>APZMDR,WIDE2-2,qAo,OH2RCH:!/0(yiTc5y>{2O http://aprs.fi/!w11!"
-	p, err := Parse(packet, nil)
+	p, err := Parse(packet)
 	if err != nil {
 		t.Fatalf("failed to parse a compressed packet with WGS84 BASE91 DAO: %v", err)
 	}
@@ -84,7 +84,7 @@ func TestDAOCompressedBase91(t *testing.T) {
 func TestDAOMicEBase91(t *testing.T) {
 	// Mic-E packet with BASE91 DAO, DAO in middle of comment
 	packet := "OH2JCQ-9>VP1U88,TRACE2-2,qAR,OH2RDK-5:'5'9\"^Rj/]\"4-}Foo !w66!Bar"
-	p, err := Parse(packet, nil)
+	p, err := Parse(packet)
 	if err != nil {
 		t.Fatalf("failed to parse a mic-e packet with WGS84 BASE91 DAO: %v", err)
 	}

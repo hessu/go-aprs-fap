@@ -14,7 +14,7 @@ func TestItemAlive(t *testing.T) {
 	// Alive item with uncompressed position
 	packet := "OH2KKU-1>APRS:)AID #2!4903.50N/07201.75WA"
 
-	p, err := Parse(packet, nil)
+	p, err := Parse(packet)
 	if err != nil {
 		t.Fatalf("failed to parse item: %v", err)
 	}
@@ -56,7 +56,7 @@ func TestItemKilled(t *testing.T) {
 	// Killed item (underscore terminator)
 	packet := "OH2KKU-1>APRS:)AID #2_4903.50N/07201.75WA"
 
-	p, err := Parse(packet, nil)
+	p, err := Parse(packet)
 	if err != nil {
 		t.Fatalf("failed to parse killed item: %v", err)
 	}
@@ -78,7 +78,7 @@ func TestItemShortName(t *testing.T) {
 	// Item with minimum 3-char name
 	packet := "OH2KKU-1>APRS:)X1Y!4903.50N/07201.75WA"
 
-	p, err := Parse(packet, nil)
+	p, err := Parse(packet)
 	if err != nil {
 		t.Fatalf("failed to parse short-name item: %v", err)
 	}
@@ -97,11 +97,11 @@ func TestItemTooShort(t *testing.T) {
 	// Packet too short for an item
 	packet := "OH2KKU-1>APRS:)short"
 
-	_, err := Parse(packet, nil)
+	_, err := Parse(packet)
 	if err == nil {
 		t.Fatal("expected error for too-short item")
 	}
-	p, _ := Parse(packet, nil)
+	p, _ := Parse(packet)
 	if p.ResultCode != "item_short" {
 		t.Errorf("resultcode = %q, want %q", p.ResultCode, "item_short")
 	}
@@ -111,7 +111,7 @@ func TestItemWithCourseSpeed(t *testing.T) {
 	// Item with course/speed extension
 	packet := "OH2KKU-1>APRS:)MOBILE!4903.50N/07201.75W>088/036"
 
-	p, err := Parse(packet, nil)
+	p, err := Parse(packet)
 	if err != nil {
 		t.Fatalf("failed to parse item with course/speed: %v", err)
 	}

@@ -28,7 +28,7 @@ func testBinaryMessage(t *testing.T, setName string, content string) {
 
 	packet, message := buildBinaryMessagePacket(content)
 
-	p, err := Parse(packet, nil)
+	p, err := Parse(packet)
 	if err != nil {
 		t.Fatalf("%s: failed to parse a message packet: %v", setName, err)
 	}

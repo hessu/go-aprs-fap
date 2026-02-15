@@ -10,7 +10,7 @@ func TestMicEBase91Telemetry5Ch(t *testing.T) {
 	// Sequence 00, 5 channels of telemetry and one channel of binary bits
 	// Body: 'I',l \x1C>/ (mic-e encoded position)
 	packet := "OH7LZB-13>SX15S6,TCPIP*,qAC,FOURTH:'I',l \x1c>/ comment |!!!!!!!!!!!!!!|"
-	p, err := Parse(packet, nil)
+	p, err := Parse(packet)
 	if err != nil {
 		t.Fatalf("failed to parse mic-e with 5-ch telemetry: %v", err)
 	}
@@ -47,7 +47,7 @@ func TestMicEBase91Telemetry5Ch(t *testing.T) {
 func TestMicEBase91Telemetry1Ch(t *testing.T) {
 	// Sequence 00, 1 channel of telemetry
 	packet := "OH7LZB-13>SX15S6,TCPIP*,qAC,FOURTH:'I',l \x1c>/ comment |!!!!|"
-	p, err := Parse(packet, nil)
+	p, err := Parse(packet)
 	if err != nil {
 		t.Fatalf("failed to parse mic-e with 1-ch telemetry: %v", err)
 	}
@@ -81,7 +81,7 @@ func TestMicEBase91Telemetry1Ch(t *testing.T) {
 func TestMicEBase91TelemetryHarder(t *testing.T) {
 	// Harder packet with base-91 telemetry
 	packet := "N6BG-1>S6QTUX:`+,^l!cR/'\";z}||ss11223344bb!\"|!w>f!|3"
-	p, err := Parse(packet, nil)
+	p, err := Parse(packet)
 	if err != nil {
 		t.Fatalf("failed to parse harder mic-e with telemetry: %v", err)
 	}
@@ -99,7 +99,7 @@ func TestMicEBase91TelemetryHarder(t *testing.T) {
 func TestMicEBase91TelemetryDAOConfusing(t *testing.T) {
 	// Telemetry that looks like it could be a DAO extension: |!wEU!![S|
 	packet := "OH7LZB-13>SX15S6,TCPIP*,qAC,FOURTH:'I',l \x1c>/ comment |!wEU!![S|"
-	p, err := Parse(packet, nil)
+	p, err := Parse(packet)
 	if err != nil {
 		t.Fatalf("failed to parse mic-e with DAO-confusing telemetry: %v", err)
 	}

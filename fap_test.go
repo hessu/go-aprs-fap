@@ -13,7 +13,7 @@ func approxEqual(a, b, tolerance float64) bool {
 // TestParseStatus tests status report parsing.
 func TestParseStatus(t *testing.T) {
 	packet := "OH7LZB>APRS:>Testing status"
-	p, err := Parse(packet, nil)
+	p, err := Parse(packet)
 	if err != nil {
 		t.Fatalf("failed to parse: %v", err)
 	}
@@ -28,7 +28,7 @@ func TestParseStatus(t *testing.T) {
 
 // TestParseNoBody tests error handling for packet without body.
 func TestParseNoBody(t *testing.T) {
-	_, err := Parse("OH7LZB>APRS", nil)
+	_, err := Parse("OH7LZB>APRS")
 	if err == nil {
 		t.Error("expected error for packet without body")
 	}
@@ -36,7 +36,7 @@ func TestParseNoBody(t *testing.T) {
 
 // TestParseNoGT tests error handling for packet without >.
 func TestParseNoGT(t *testing.T) {
-	_, err := Parse("OH7LZB:body", nil)
+	_, err := Parse("OH7LZB:body")
 	if err == nil {
 		t.Error("expected error for packet without >")
 	}
@@ -69,11 +69,11 @@ func TestDirection(t *testing.T) {
 // TestParseObject tests object parsing.
 func TestParseObject(t *testing.T) {
 	packet := "OH7LZB>APRS::;LEADER   *092345z4903.50N/07201.75W>"
-	p, err := Parse(packet, nil)
+	p, err := Parse(packet)
 
 	// This packet has a message-type body (starts with :), the actual object packet would be:
 	packet = "OH7LZB>APRS:;LEADER   *092345z4903.50N/07201.75W>comment"
-	p, err = Parse(packet, nil)
+	p, err = Parse(packet)
 	if err != nil {
 		t.Fatalf("failed to parse object: %v", err)
 	}
@@ -92,7 +92,7 @@ func TestParseObject(t *testing.T) {
 // TestParseTelemetry tests telemetry parsing.
 func TestParseTelemetry(t *testing.T) {
 	packet := "OH7LZB>APRS:T#123,001,002,003,004,005,10101010"
-	p, err := Parse(packet, nil)
+	p, err := Parse(packet)
 	if err != nil {
 		t.Fatalf("failed to parse telemetry: %v", err)
 	}
@@ -120,7 +120,7 @@ func TestParseTelemetry(t *testing.T) {
 // TestParseCapabilities tests capabilities parsing.
 func TestParseCapabilities(t *testing.T) {
 	packet := "OH7LZB>APRS:<IGATE,MSG_CNT=5,LOC_CNT=10"
-	p, err := Parse(packet, nil)
+	p, err := Parse(packet)
 	if err != nil {
 		t.Fatalf("failed to parse capabilities: %v", err)
 	}
@@ -138,7 +138,7 @@ func TestParseCapabilities(t *testing.T) {
 
 func ExampleParseAPRS() {
 	packet := "OH7LZB-2>APRS,WIDE1-1,WIDE2-1,qAo,OH7LZB:!6128.23N/02353.52E-PHG2360/Testing"
-	p, err := Parse(packet, nil)
+	p, err := Parse(packet)
 	if err != nil {
 		fmt.Printf("Error: %v\n", err)
 		return

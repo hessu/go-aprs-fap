@@ -10,7 +10,7 @@ import (
 func TestUncompressedNortheast(t *testing.T) {
 	packet := "OH2RDP-1>BEACON-15,OH2RDG*,WIDE:!6028.51N/02505.68E#PHG7220/RELAY,WIDE, OH2AP Jarvenpaa"
 
-	p, err := Parse(packet, nil)
+	p, err := Parse(packet)
 	if err != nil {
 		t.Fatalf("failed to parse: %v", err)
 	}
@@ -63,7 +63,7 @@ func TestUncompressedNortheast(t *testing.T) {
 func TestUncompressedSouthwest(t *testing.T) {
 	packet := "OH2RDP-1>BEACON-15,OH2RDG*,WIDE:!6028.51S/02505.68W#PHG7220RELAY,WIDE, OH2AP Jarvenpaa"
 
-	p, err := Parse(packet, nil)
+	p, err := Parse(packet)
 	if err != nil {
 		t.Fatalf("failed to parse: %v", err)
 	}
@@ -81,7 +81,7 @@ func TestUncompressedSouthwest(t *testing.T) {
 func TestUncompressedAmbiguity3(t *testing.T) {
 	packet := "OH2RDP-1>BEACON-15,OH2RDG*,WIDE:!602 .  S/0250 .  W#PHG7220RELAY,WIDE, OH2AP Jarvenpaa"
 
-	p, err := Parse(packet, nil)
+	p, err := Parse(packet)
 	if err != nil {
 		t.Fatalf("failed to parse: %v", err)
 	}
@@ -102,7 +102,7 @@ func TestUncompressedAmbiguity3(t *testing.T) {
 func TestUncompressedAmbiguity4(t *testing.T) {
 	packet := "OH2RDP-1>BEACON-15,OH2RDG*,WIDE:!60  .  S/025  .  W#PHG7220RELAY,WIDE, OH2AP Jarvenpaa"
 
-	p, err := Parse(packet, nil)
+	p, err := Parse(packet)
 	if err != nil {
 		t.Fatalf("failed to parse: %v", err)
 	}
@@ -124,7 +124,7 @@ func TestUncompressedLastResort(t *testing.T) {
 	// Last-resort !-location parsing: body starts with non-APRS text, position found at '!'
 	packet := "OH2RDP-1>BEACON-15,OH2RDG*,WIDE:hoponassualku!6028.51S/02505.68W#PHG7220RELAY,WIDE, OH2AP Jarvenpaa"
 
-	p, err := Parse(packet, nil)
+	p, err := Parse(packet)
 	if err != nil {
 		t.Fatalf("failed to parse: %v", err)
 	}
@@ -146,7 +146,7 @@ func TestUncompressedWxSymbolComment(t *testing.T) {
 	// Station with WX symbol (_). Comment is ignored because it gets confused with weather data.
 	packet := "A0RID-1>KC0PID-7,WIDE1,qAR,NX0R-6:=3851.38N/09908.75W_Home of KA0RID"
 
-	p, err := Parse(packet, nil)
+	p, err := Parse(packet)
 	if err != nil {
 		t.Fatalf("failed to parse: %v", err)
 	}
@@ -168,7 +168,7 @@ func TestUncompressedWhitespaceTrimming(t *testing.T) {
 	// Whitespace should be trimmed from comment
 	packet := "OH2RDP-1>BEACON-15,OH2RDG*,WIDE:!6028.51N/02505.68E#PHG7220   RELAY,WIDE, OH2AP Jarvenpaa  \t "
 
-	p, err := Parse(packet, nil)
+	p, err := Parse(packet)
 	if err != nil {
 		t.Fatalf("failed to parse: %v", err)
 	}
@@ -184,7 +184,7 @@ func TestUncompressedTimestampAltitude(t *testing.T) {
 	// Position with timestamp and altitude
 	packet := "YB1RUS-9>APOTC1,WIDE2-2,qAS,YC0GIN-1:/180000z0609.31S/10642.85E>058/010/A=000079 13.8V 15CYB1RUS-9 Mobile Tracker"
 
-	p, err := Parse(packet, nil)
+	p, err := Parse(packet)
 	if err != nil {
 		t.Fatalf("failed to parse: %v", err)
 	}
@@ -206,7 +206,7 @@ func TestUncompressedNegativeAltitude(t *testing.T) {
 	// Position with negative altitude
 	packet := "YB1RUS-9>APOTC1,WIDE2-2,qAS,YC0GIN-1:/180000z0609.31S/10642.85E>058/010/A=-00079 13.8V 15CYB1RUS-9 Mobile Tracker"
 
-	p, err := Parse(packet, nil)
+	p, err := Parse(packet)
 	if err != nil {
 		t.Fatalf("failed to parse: %v", err)
 	}
@@ -222,7 +222,7 @@ func TestUncompressedBasicYC0SHR(t *testing.T) {
 	// Rather basic position packet
 	packet := "YC0SHR>APU25N,TCPIP*,qAC,ALDIMORI:=0606.23S/10644.61E-GW SAHARA PENJARINGAN JAKARTA 147.880 MHz"
 
-	p, err := Parse(packet, nil)
+	p, err := Parse(packet)
 	if err != nil {
 		t.Fatalf("failed to parse: %v", err)
 	}

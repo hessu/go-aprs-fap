@@ -13,7 +13,7 @@ func TestUncompressedMoving(t *testing.T) {
 	body := "!6253.52N/02739.47E>036/010/A=000465 |!!!!!!!!!!!!!!|"
 	packet := header + ":" + body
 
-	p, err := Parse(packet, nil)
+	p, err := Parse(packet)
 	if err != nil {
 		t.Fatalf("failed to parse: %v", err)
 	}

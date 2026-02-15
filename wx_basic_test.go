@@ -10,7 +10,7 @@ import (
 func TestWxBasic(t *testing.T) {
 	packet := "OH2RDP-1>BEACON-15,WIDE2-1,qAo,OH2MQK-1:=6030.35N/02443.91E_150/002g004t039r001P002p004h00b10125XRSW"
 
-	p, err := Parse(packet, nil)
+	p, err := Parse(packet)
 	if err != nil {
 		t.Fatalf("failed to parse a basic wx packet: %v", err)
 	}
@@ -74,7 +74,7 @@ func TestWxBasic(t *testing.T) {
 func TestWxWithComment(t *testing.T) {
 	packet := "OH2GAX>APU25N,TCPIP*,qAC,OH2GAX:@101317z6024.78N/02503.97E_156/001g005t038r000p000P000h91b10093/type ?sade for more wx info"
 
-	p, err := Parse(packet, nil)
+	p, err := Parse(packet)
 	if err != nil {
 		t.Fatalf("failed to parse second basic wx packet: %v", err)
 	}
@@ -131,7 +131,7 @@ func TestWxWithComment(t *testing.T) {
 func TestWxThirdWithComment(t *testing.T) {
 	packet := "JH9YVX>APU25N,TCPIP*,qAC,T2TOKYO3:@011241z3558.58N/13629.67E_068/001g001t033r000p020P020b09860h98Oregon WMR100N Weather Station {UIV32N}"
 
-	p, err := Parse(packet, nil)
+	p, err := Parse(packet)
 	if err != nil {
 		t.Fatalf("failed to parse third basic wx packet: %v", err)
 	}
@@ -188,7 +188,7 @@ func TestWxThirdWithComment(t *testing.T) {
 func TestWxNoWindDirectionCourse(t *testing.T) {
 	packet := "N0CALL>APU25N,TCPIP*,qAC,T2TOKYO3:@011241z3558.58N/13629.67E_.../...g001t033r000p020P020b09860h98Oregon WMR100N Weather Station {UIV32N}"
 
-	p, err := Parse(packet, nil)
+	p, err := Parse(packet)
 	if err != nil {
 		t.Fatalf("failed to parse wx packet without wind direction/course: %v", err)
 	}
@@ -206,7 +206,7 @@ func TestWxNoWindDirectionCourse(t *testing.T) {
 func TestWxNoWindNoTemp(t *testing.T) {
 	packet := "N0CALL>APJLSX,TCPIP*,qAS,KG4EXY:@061750z3849.10N/07725.10W_.../...g...t...r008p011P011b.....h.."
 
-	p, err := Parse(packet, nil)
+	p, err := Parse(packet)
 	if err != nil {
 		t.Fatalf("failed to parse wx packet without wind, gust or temperature: %v", err)
 	}
@@ -224,7 +224,7 @@ func TestWxNoWindNoTemp(t *testing.T) {
 func TestWxSpaceInWindGust(t *testing.T) {
 	packet := "N0CALL>APU25N,TCPIP*,qAC,T2TOKYO3:@011241z3558.58N/13629.67E_.../...g   t033r000p020P020b09860h98Oregon WMR100N Weather Station {UIV32N}"
 
-	p, err := Parse(packet, nil)
+	p, err := Parse(packet)
 	if err != nil {
 		t.Fatalf("failed to parse wx packet with spaces in wind gust: %v", err)
 	}
@@ -242,7 +242,7 @@ func TestWxSpaceInWindGust(t *testing.T) {
 func TestWxPositionlessWithSnowfall(t *testing.T) {
 	packet := "JH9YVX>APU25N,TCPIP*,qAC,T2TOKYO3:_12032359c180s001g002t033r010p040P080b09860h98Os010L500"
 
-	p, err := Parse(packet, nil)
+	p, err := Parse(packet)
 	if err != nil {
 		t.Fatalf("failed to parse positionless wx packet: %v", err)
 	}

@@ -11,7 +11,7 @@ import (
 func TestGPRMC(t *testing.T) {
 	packet := "OH7LZB-11>APRS,W4GR*,WIDE2-1,qAR,WA4DSY:$GPRMC,145526,A,3349.0378,N,08406.2617,W,23.726,27.9,121207,4.9,W*7A"
 
-	p, err := Parse(packet, nil)
+	p, err := Parse(packet)
 	if err != nil {
 		t.Fatalf("failed to parse a GPRMC NMEA packet: %v", err)
 	}

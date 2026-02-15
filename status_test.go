@@ -20,7 +20,7 @@ func TestStatusWithTimestamp(t *testing.T) {
 
 	packet := "KB3HVP-14>APU25N,WIDE2-2,qAR,LANSNG:>" + tstamp + msg
 
-	p, err := Parse(packet, nil)
+	p, err := Parse(packet)
 	if err != nil {
 		t.Fatalf("failed to parse a status message packet: %v", err)
 	}
