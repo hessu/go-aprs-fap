@@ -256,8 +256,14 @@ func (p *Packet) parseHeader(opt *options) error {
 		return p.fail(ErrSrcCallEmpty, "source callsign is empty")
 	}
 
-	// Validate source callsign characters
-	if !srcCallRe.MatchString(p.SrcCallsign) {
+	// Validate source callsign
+	if opt.isAX25 {
+		normalized := CheckAX25Call(p.SrcCallsign)
+		if normalized == "" {
+			return p.fail(ErrSrcCallNoAX25, "source callsign is not a valid AX.25 call")
+		}
+		p.SrcCallsign = normalized
+	} else if !srcCallRe.MatchString(p.SrcCallsign) {
 		return p.fail(ErrSrcCallBadChars, "source callsign contains bad characters")
 	}
 
@@ -268,6 +274,12 @@ func (p *Packet) parseHeader(opt *options) error {
 
 	// Split the rest by commas: first is destination, rest are digipeaters
 	parts := strings.Split(rest, ",")
+
+	// AX.25 limits path to 9 components (1 dst + 8 digipeaters)
+	if opt.isAX25 && len(parts) > 9 {
+		return p.fail(ErrDstPathTooMany, "too many path components for AX.25")
+	}
+
 	p.DstCallsign = parts[0]
 
 	if len(p.DstCallsign) == 0 {
@@ -289,14 +301,22 @@ func (p *Packet) parseHeader(opt *options) error {
 		}
 
 		// Validate digipeater callsign
-		if digiCallRe.MatchString(digi.Call) {
-			if qConstrRe.MatchString(digi.Call) {
-				seenQConstr = true
+		if opt.isAX25 {
+			normalized := CheckAX25Call(digi.Call)
+			if normalized == "" {
+				return p.fail(ErrDigiCallNoAX25, "digipeater callsign is not a valid AX.25 call")
 			}
-		} else if seenQConstr && ipv6HexRe.MatchString(digi.Call) {
-			// Allow 32-char hex IPv6 addresses after q-construct
+			digi.Call = normalized
 		} else {
-			return p.fail(ErrDigiCallBadChars, "digipeater callsign contains bad characters")
+			if digiCallRe.MatchString(digi.Call) {
+				if qConstrRe.MatchString(digi.Call) {
+					seenQConstr = true
+				}
+			} else if seenQConstr && ipv6HexRe.MatchString(digi.Call) {
+				// Allow 32-char hex IPv6 addresses after q-construct
+			} else {
+				return p.fail(ErrDigiCallBadChars, "digipeater callsign contains bad characters")
+			}
 		}
 
 		p.Digipeaters = append(p.Digipeaters, digi)
