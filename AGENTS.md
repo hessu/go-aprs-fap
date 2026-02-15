@@ -47,7 +47,7 @@ Parses a TNC2/APRS-IS format packet string into a `Packet` struct. Options: `IsA
 
 - **Optional fields use pointers**: `*float64`, `*int`, `*time.Time` — nil means not present in packet
 - **Telemetry values**: `[]*float64` where nil elements represent undefined channels
-- **Error reporting**: Parse failures return error and set `Packet.ResultCode` / `Packet.ResultMsg` with constants from errors.go
+- **Error reporting**: Parse failures return `*ParseError` (defined in errors.go) with `Code` and `Msg` fields. Use `errors.Is(err, fap.ErrXxx)` to check for specific error codes
 - **Comment parsing** extracts embedded data (altitude, DAO, weather, base-91 telemetry) then stores the remainder in `Packet.Comment`
 - **Base-91 telemetry** in Mic-E comments uses `|...|` delimiters with LSB-first bit order (matching Perl's `unpack('b8')`)
 

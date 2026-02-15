@@ -1,64 +1,88 @@
 package fap
 
-// Error code constants for parse failures.
-const (
-	ErrPacketNoBody     = "packet_no_body"
-	ErrPacketShort      = "packet_short"
-	ErrSrcCallNoGT      = "srccall_nogt"
-	ErrSrcCallEmpty     = "srccall_empty"
-	ErrSrcCallBadChars  = "srccall_badchars"
-	ErrDstCallEmpty     = "dstcall_empty"
-	ErrDstCallNoAX25    = "dstcall_noax25"
-	ErrDstPathTooMany   = "dstpath_toomany"
-	ErrSrcCallNoAX25    = "srccall_noax25"
-	ErrDigiEmpty        = "digi_empty"
-	ErrDigiCallBadChars = "digicall_badchars"
-	ErrDigiCallNoAX25   = "digicall_noax25"
-	ErrNoBody           = "no_body"
-	ErrTypeNotSupported = "type_not_supported"
-	ErrExpUnsupported   = "exp_unsupp"
+// ParseError represents a parse failure with a machine-readable error code
+// and a human-readable detail message. Sentinel errors have an empty Msg;
+// per-instance errors returned by the parser carry a specific Msg.
+//
+// Use errors.Is(err, fap.ErrPosShort) to check for a specific error code.
+type ParseError struct {
+	Code string // Machine-readable error code (e.g. "pos_short")
+	Msg  string // Human-readable detail
+}
+
+func (e *ParseError) Error() string {
+	return "fap: " + e.Code + ": " + e.Msg
+}
+
+// Is reports whether target matches this error's Code, enabling errors.Is()
+// to match any *ParseError with the same Code regardless of Msg.
+func (e *ParseError) Is(target error) bool {
+	t, ok := target.(*ParseError)
+	if !ok {
+		return false
+	}
+	return e.Code == t.Code
+}
+
+// Sentinel parse errors. Use errors.Is(err, fap.ErrXxx) to check.
+var (
+	ErrPacketNoBody     = &ParseError{Code: "packet_no_body"}
+	ErrPacketShort      = &ParseError{Code: "packet_short"}
+	ErrSrcCallNoGT      = &ParseError{Code: "srccall_nogt"}
+	ErrSrcCallEmpty     = &ParseError{Code: "srccall_empty"}
+	ErrSrcCallBadChars  = &ParseError{Code: "srccall_badchars"}
+	ErrDstCallEmpty     = &ParseError{Code: "dstcall_empty"}
+	ErrDstCallNoAX25    = &ParseError{Code: "dstcall_noax25"}
+	ErrDstPathTooMany   = &ParseError{Code: "dstpath_toomany"}
+	ErrSrcCallNoAX25    = &ParseError{Code: "srccall_noax25"}
+	ErrDigiEmpty        = &ParseError{Code: "digi_empty"}
+	ErrDigiCallBadChars = &ParseError{Code: "digicall_badchars"}
+	ErrDigiCallNoAX25   = &ParseError{Code: "digicall_noax25"}
+	ErrNoBody           = &ParseError{Code: "no_body"}
+	ErrTypeNotSupported = &ParseError{Code: "type_not_supported"}
+	ErrExpUnsupported   = &ParseError{Code: "exp_unsupp"}
 
 	// Position errors
-	ErrPosAmbiguity  = "pos_ambiguity"
-	ErrPosShort      = "pos_short"
-	ErrPosInvalid    = "pos_invalid"
-	ErrPosLatInvalid = "pos_lat_invalid"
-	ErrPosLonInvalid = "pos_lon_invalid"
-	ErrLocInvalid    = "loc_inv"
-	ErrLocLarge      = "loc_large"
+	ErrPosAmbiguity  = &ParseError{Code: "pos_ambiguity"}
+	ErrPosShort      = &ParseError{Code: "pos_short"}
+	ErrPosInvalid    = &ParseError{Code: "pos_invalid"}
+	ErrPosLatInvalid = &ParseError{Code: "pos_lat_invalid"}
+	ErrPosLonInvalid = &ParseError{Code: "pos_lon_invalid"}
+	ErrLocInvalid    = &ParseError{Code: "loc_inv"}
+	ErrLocLarge      = &ParseError{Code: "loc_large"}
 
 	// Symbol errors
-	ErrSymInvTable = "sym_inv_table"
+	ErrSymInvTable = &ParseError{Code: "sym_inv_table"}
 
 	// Compressed position errors
-	ErrCompShort   = "comp_short"
-	ErrCompInvalid = "comp_invalid"
+	ErrCompShort   = &ParseError{Code: "comp_short"}
+	ErrCompInvalid = &ParseError{Code: "comp_invalid"}
 
 	// Mic-E errors
-	ErrMiceShort        = "mice_short"
-	ErrMiceInvDstCall   = "mice_inv_dstcall"
-	ErrMiceInvInfoField = "mice_inv_infofield"
+	ErrMiceShort        = &ParseError{Code: "mice_short"}
+	ErrMiceInvDstCall   = &ParseError{Code: "mice_inv_dstcall"}
+	ErrMiceInvInfoField = &ParseError{Code: "mice_inv_infofield"}
 
 	// Object/item errors
-	ErrObjShort    = "obj_short"
-	ErrObjInvalid  = "obj_inv"
-	ErrItemShort   = "item_short"
-	ErrItemInvalid = "item_invalid"
+	ErrObjShort    = &ParseError{Code: "obj_short"}
+	ErrObjInvalid  = &ParseError{Code: "obj_inv"}
+	ErrItemShort   = &ParseError{Code: "item_short"}
+	ErrItemInvalid = &ParseError{Code: "item_invalid"}
 
 	// Message errors
-	ErrMsgShort   = "msg_short"
-	ErrMsgInvalid = "msg_invalid"
+	ErrMsgShort   = &ParseError{Code: "msg_short"}
+	ErrMsgInvalid = &ParseError{Code: "msg_invalid"}
 
 	// NMEA errors
-	ErrNMEAShort   = "nmea_short"
-	ErrNMEAInvalid = "nmea_invalid"
+	ErrNMEAShort   = &ParseError{Code: "nmea_short"}
+	ErrNMEAInvalid = &ParseError{Code: "nmea_invalid"}
 
 	// Timestamp errors
-	ErrTimestampInvalid = "timestamp_inv"
+	ErrTimestampInvalid = &ParseError{Code: "timestamp_inv"}
 
 	// Weather errors
-	ErrWxInvalid = "wx_invalid"
+	ErrWxInvalid = &ParseError{Code: "wx_invalid"}
 
 	// Telemetry errors
-	ErrTlmInvalid = "tlm_inv"
+	ErrTlmInvalid = &ParseError{Code: "tlm_inv"}
 )

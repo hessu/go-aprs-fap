@@ -1,6 +1,7 @@
 package fap
 
 import (
+	"errors"
 	"fmt"
 	"testing"
 )
@@ -17,9 +18,6 @@ func TestItemAlive(t *testing.T) {
 	p, err := Parse(packet)
 	if err != nil {
 		t.Fatalf("failed to parse item: %v", err)
-	}
-	if p.ResultCode != "" {
-		t.Fatalf("unexpected result code: %s", p.ResultCode)
 	}
 	if p.Type != PacketTypeItem {
 		t.Errorf("type = %q, want %q", p.Type, PacketTypeItem)
@@ -60,9 +58,6 @@ func TestItemKilled(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to parse killed item: %v", err)
 	}
-	if p.ResultCode != "" {
-		t.Fatalf("unexpected result code: %s", p.ResultCode)
-	}
 	if p.Type != PacketTypeItem {
 		t.Errorf("type = %q, want %q", p.Type, PacketTypeItem)
 	}
@@ -81,9 +76,6 @@ func TestItemShortName(t *testing.T) {
 	p, err := Parse(packet)
 	if err != nil {
 		t.Fatalf("failed to parse short-name item: %v", err)
-	}
-	if p.ResultCode != "" {
-		t.Fatalf("unexpected result code: %s", p.ResultCode)
 	}
 	if p.ItemName != "X1Y" {
 		t.Errorf("itemname = %q, want %q", p.ItemName, "X1Y")
@@ -123,9 +115,8 @@ func TestItemTooShort(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error for too-short item")
 	}
-	p, _ := Parse(packet)
-	if p.ResultCode != "item_short" {
-		t.Errorf("resultcode = %q, want %q", p.ResultCode, "item_short")
+	if !errors.Is(err, ErrItemShort) {
+		t.Errorf("error = %v, want %v", err, ErrItemShort)
 	}
 }
 

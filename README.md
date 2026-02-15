@@ -76,6 +76,33 @@ func main() {
 }
 ```
 
+## Error handling
+
+Parse errors are returned as `*fap.ParseError` values, which carry a
+machine-readable `Code` (e.g. `"pos_short"`) and a human-readable `Msg`.
+Sentinel error variables (e.g. `fap.ErrPosShort`) are provided for use
+with `errors.Is()`:
+
+```go
+import "errors"
+
+p, err := fap.Parse(raw)
+if errors.Is(err, fap.ErrLocInvalid) {
+    // invalid location
+} else if err != nil {
+    // some other parse failure
+}
+```
+
+To access the error code and message directly, use `errors.As()`:
+
+```go
+var parseErr *fap.ParseError
+if errors.As(err, &parseErr) {
+    fmt.Printf("code=%s msg=%s\n", parseErr.Code, parseErr.Msg)
+}
+```
+
 ## APRS-IS client
 
 The package includes an APRS-IS TCP client for connecting to APRS-IS

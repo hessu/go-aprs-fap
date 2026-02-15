@@ -17,9 +17,6 @@ func TestMessageNormal(t *testing.T) {
 			if err != nil {
 				t.Fatalf("failed to parse message: %v", err)
 			}
-			if p.ResultCode != "" {
-				t.Fatalf("unexpected result code: %s", p.ResultCode)
-			}
 			if p.Type != PacketTypeMessage {
 				t.Errorf("type = %q, want %q", p.Type, PacketTypeMessage)
 			}
@@ -51,9 +48,6 @@ func TestMessageReplyAckEmpty(t *testing.T) {
 			if err != nil {
 				t.Fatalf("failed to parse message: %v", err)
 			}
-			if p.ResultCode != "" {
-				t.Fatalf("unexpected result code: %s", p.ResultCode)
-			}
 			if p.Type != PacketTypeMessage {
 				t.Errorf("type = %q, want %q", p.Type, PacketTypeMessage)
 			}
@@ -82,9 +76,6 @@ func TestMessageReplyAck(t *testing.T) {
 			if err != nil {
 				t.Fatalf("failed to parse message: %v", err)
 			}
-			if p.ResultCode != "" {
-				t.Fatalf("unexpected result code: %s", p.ResultCode)
-			}
 			if p.Type != PacketTypeMessage {
 				t.Errorf("type = %q, want %q", p.Type, PacketTypeMessage)
 			}
@@ -112,9 +103,6 @@ func TestMessageAck(t *testing.T) {
 			if err != nil {
 				t.Fatalf("failed to parse ack: %v", err)
 			}
-			if p.ResultCode != "" {
-				t.Fatalf("unexpected result code: %s", p.ResultCode)
-			}
 			if p.Type != PacketTypeMessage {
 				t.Errorf("type = %q, want %q", p.Type, PacketTypeMessage)
 			}
@@ -138,9 +126,6 @@ func TestMessageReject(t *testing.T) {
 			p, err := Parse(packet)
 			if err != nil {
 				t.Fatalf("failed to parse reject: %v", err)
-			}
-			if p.ResultCode != "" {
-				t.Fatalf("unexpected result code: %s", p.ResultCode)
 			}
 			if p.Type != PacketTypeMessage {
 				t.Errorf("type = %q, want %q", p.Type, PacketTypeMessage)

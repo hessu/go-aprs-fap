@@ -1,6 +1,7 @@
 package fap
 
 import (
+	"errors"
 	"testing"
 )
 
@@ -16,8 +17,8 @@ func TestObjectInvalidBroken(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error for broken object packet")
 	}
-	if p.ResultCode != "obj_inv" {
-		t.Errorf("resultcode = %q, want %q", p.ResultCode, "obj_inv")
+	if !errors.Is(err, ErrObjInvalid) {
+		t.Errorf("error = %v, want %v", err, ErrObjInvalid)
 	}
 	if p.Type != PacketTypeObject {
 		t.Errorf("type = %q, want %q", p.Type, PacketTypeObject)

@@ -17,7 +17,6 @@
 package fap
 
 import (
-	"fmt"
 	"math"
 	"regexp"
 	"strconv"
@@ -167,9 +166,6 @@ type Packet struct {
 	// Comment
 	Comment string // Packet comment text
 
-	// Error/warning info (populated on parse failure)
-	ResultCode string // Machine-readable error code
-	ResultMsg  string // Human-readable error message
 }
 
 // options holds internal parsing configuration.
@@ -199,7 +195,7 @@ func WithRawTimestamp() Option {
 
 // Parse parses an APRS packet in TNC2 / APRS-IS text format.
 // It returns a Packet struct with all parsed fields populated.
-// If parsing fails, the returned Packet will have ResultCode and ResultMsg set.
+// On failure, the returned error is a *ParseError with Code and Msg fields.
 func Parse(raw string, opts ...Option) (*Packet, error) {
 	var opt options
 	for _, o := range opts {
@@ -236,11 +232,9 @@ func Parse(raw string, opts ...Option) (*Packet, error) {
 	return p, nil
 }
 
-// fail sets error fields on the packet and returns an error.
-func (p *Packet) fail(code, msg string) error {
-	p.ResultCode = code
-	p.ResultMsg = msg
-	return fmt.Errorf("fap: %s: %s", code, msg)
+// fail returns a *ParseError with the given sentinel's code and the specific message.
+func (p *Packet) fail(code *ParseError, msg string) error {
+	return &ParseError{Code: code.Code, Msg: msg}
 }
 
 // parseHeader parses the packet header into source, destination, and digipeaters.
@@ -352,8 +346,6 @@ func (p *Packet) parseBody(opt *options) error {
 		err := p.parseMicE(opt)
 		if err != nil && opt.acceptBrokenMicE {
 			// Reset fields that parseMicE may have partially set
-			p.ResultCode = ""
-			p.ResultMsg = ""
 			p.Speed = nil
 			p.Course = nil
 			p.Altitude = nil

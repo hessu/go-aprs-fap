@@ -16,9 +16,6 @@ func TestObjectCompressed(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to parse object packet: %v", err)
 	}
-	if p.ResultCode != "" {
-		t.Fatalf("unexpected result code: %s", p.ResultCode)
-	}
 	if p.Type != PacketTypeObject {
 		t.Errorf("type = %q, want %q", p.Type, PacketTypeObject)
 	}
@@ -74,9 +71,6 @@ func TestObjectUncompressed(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to parse object packet: %v", err)
 	}
-	if p.ResultCode != "" {
-		t.Fatalf("unexpected result code: %s", p.ResultCode)
-	}
 	if p.Type != PacketTypeObject {
 		t.Errorf("type = %q, want %q", p.Type, PacketTypeObject)
 	}
@@ -122,9 +116,6 @@ func TestObjectKilled(t *testing.T) {
 	p, err := Parse(packet)
 	if err != nil {
 		t.Fatalf("failed to parse killed object packet: %v", err)
-	}
-	if p.ResultCode != "" {
-		t.Fatalf("unexpected result code: %s", p.ResultCode)
 	}
 	if p.Type != PacketTypeObject {
 		t.Errorf("type = %q, want %q", p.Type, PacketTypeObject)

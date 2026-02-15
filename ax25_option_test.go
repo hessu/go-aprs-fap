@@ -1,6 +1,7 @@
 package fap
 
 import (
+	"errors"
 	"testing"
 )
 
@@ -9,7 +10,7 @@ func TestWithAX25(t *testing.T) {
 		name       string
 		packet     string
 		wantErr    bool
-		wantCode   string
+		wantCode   *ParseError
 		wantSrc    string
 		wantDst    string
 		wantDigis  []string
@@ -93,8 +94,8 @@ func TestWithAX25(t *testing.T) {
 				if err == nil {
 					t.Fatalf("expected error with code %q, got nil", tc.wantCode)
 				}
-				if p.ResultCode != tc.wantCode {
-					t.Errorf("ResultCode = %q, want %q", p.ResultCode, tc.wantCode)
+				if !errors.Is(err, tc.wantCode) {
+					t.Errorf("error = %v, want %v", err, tc.wantCode)
 				}
 				return
 			}
@@ -128,11 +129,11 @@ func TestWithAX25(t *testing.T) {
 func TestDstCallNoAX25WithoutOption(t *testing.T) {
 	// Destination callsign is always validated as AX.25, even without WithAX25()
 	packet := "OH7LZB>TOOLONGDST:>status"
-	p, err := Parse(packet)
+	_, err := Parse(packet)
 	if err == nil {
 		t.Fatalf("expected error, got nil")
 	}
-	if p.ResultCode != ErrDstCallNoAX25 {
-		t.Errorf("ResultCode = %q, want %q", p.ResultCode, ErrDstCallNoAX25)
+	if !errors.Is(err, ErrDstCallNoAX25) {
+		t.Errorf("error = %v, want %v", err, ErrDstCallNoAX25)
 	}
 }

@@ -1,6 +1,7 @@
 package fap
 
 import (
+	"errors"
 	"testing"
 )
 
@@ -15,8 +16,8 @@ func TestBeaconNonAPRS(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error for non-APRS beacon packet")
 	}
-	if p.ResultCode != ErrTypeNotSupported {
-		t.Errorf("resultcode = %q, want %q", p.ResultCode, ErrTypeNotSupported)
+	if !errors.Is(err, ErrTypeNotSupported) {
+		t.Errorf("error = %v, want %v", err, ErrTypeNotSupported)
 	}
 	if p.SrcCallsign != "OH2RDU" {
 		t.Errorf("srccallsign = %q, want %q", p.SrcCallsign, "OH2RDU")

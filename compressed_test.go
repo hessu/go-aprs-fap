@@ -16,9 +16,6 @@ func TestCompressedNonMoving(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to parse: %v", err)
 	}
-	if p.ResultCode != "" {
-		t.Fatalf("unexpected result code: %s", p.ResultCode)
-	}
 
 	if p.SrcCallsign != "OH2KKU-15" {
 		t.Errorf("srccallsign = %q, want %q", p.SrcCallsign, "OH2KKU-15")
@@ -110,9 +107,6 @@ func TestCompressedMoving(t *testing.T) {
 	p, err := Parse(packet)
 	if err != nil {
 		t.Fatalf("failed to parse: %v", err)
-	}
-	if p.ResultCode != "" {
-		t.Fatalf("unexpected result code: %s", p.ResultCode)
 	}
 
 	if p.SrcCallsign != "OH2LCQ-10" {
@@ -212,9 +206,6 @@ func TestCompressedWeather(t *testing.T) {
 	p, err := Parse(packet)
 	if err != nil {
 		t.Fatalf("failed to parse: %v", err)
-	}
-	if p.ResultCode != "" {
-		t.Fatalf("unexpected result code: %s", p.ResultCode)
 	}
 
 	if p.SymbolTable != '/' {

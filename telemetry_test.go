@@ -1,6 +1,7 @@
 package fap
 
 import (
+	"errors"
 	"testing"
 )
 
@@ -11,9 +12,6 @@ func TestTelemetryClassic(t *testing.T) {
 	p, err := Parse("SRCCALL>APRS:T#324,000,038,255,.12,50.12,01000001")
 	if err != nil {
 		t.Fatalf("failed to parse telemetry packet: %v", err)
-	}
-	if p.ResultCode != "" {
-		t.Fatalf("unexpected result code: %s", p.ResultCode)
 	}
 	if p.TelemetryData == nil {
 		t.Fatal("no telemetry data")
@@ -46,9 +44,6 @@ func TestTelemetryRelaxed(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to parse relaxed telemetry: %v", err)
 	}
-	if p.ResultCode != "" {
-		t.Fatalf("unexpected result code: %s", p.ResultCode)
-	}
 
 	tlm := p.TelemetryData
 	if tlm == nil {
@@ -76,9 +71,6 @@ func TestTelemetryShort(t *testing.T) {
 	p, err := Parse("SRCCALL>APRS:T#001,42")
 	if err != nil {
 		t.Fatalf("failed to parse short telemetry: %v", err)
-	}
-	if p.ResultCode != "" {
-		t.Fatalf("unexpected result code: %s", p.ResultCode)
 	}
 
 	tlm := p.TelemetryData
@@ -171,9 +163,8 @@ func TestTelemetryInvalidDash(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error for invalid telemetry with bare dash")
 	}
-	p, _ := Parse("SRCCALL>APRS:T#1,1,-,3")
-	if p.ResultCode != "tlm_inv" {
-		t.Errorf("resultcode = %q, want %q", p.ResultCode, "tlm_inv")
+	if !errors.Is(err, ErrTlmInvalid) {
+		t.Errorf("error = %v, want %v", err, ErrTlmInvalid)
 	}
 }
 
@@ -183,8 +174,7 @@ func TestTelemetryInvalidTrailingDot(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error for invalid telemetry with trailing dot")
 	}
-	p, _ := Parse("SRCCALL>APRS:T#1,1,-1.,3")
-	if p.ResultCode != "tlm_inv" {
-		t.Errorf("resultcode = %q, want %q", p.ResultCode, "tlm_inv")
+	if !errors.Is(err, ErrTlmInvalid) {
+		t.Errorf("error = %v, want %v", err, ErrTlmInvalid)
 	}
 }

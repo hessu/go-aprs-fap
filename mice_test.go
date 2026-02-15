@@ -1,6 +1,7 @@
 package fap
 
 import (
+	"errors"
 	"fmt"
 	"testing"
 )
@@ -208,8 +209,8 @@ func TestMicEInvalidSymbolTable(t *testing.T) {
 		t.Fatal("expected error for invalid symbol table, got nil")
 	}
 
-	if p.ResultCode != ErrSymInvTable {
-		t.Errorf("resultcode = %q, want %q", p.ResultCode, ErrSymInvTable)
+	if !errors.Is(err, ErrSymInvTable) {
+		t.Errorf("error = %v, want %v", err, ErrSymInvTable)
 	}
 	if p.SrcCallsign != "OZ2BRN-4" {
 		t.Errorf("srccallsign = %q, want %q", p.SrcCallsign, "OZ2BRN-4")

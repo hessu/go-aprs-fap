@@ -14,9 +14,6 @@ func TestUncompressedNortheast(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to parse: %v", err)
 	}
-	if p.ResultCode != "" {
-		t.Fatalf("unexpected result code: %s", p.ResultCode)
-	}
 	if p.Format != FormatUncompressed {
 		t.Errorf("format = %q, want %q", p.Format, FormatUncompressed)
 	}

@@ -17,9 +17,6 @@ func TestUncompressedMoving(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to parse: %v", err)
 	}
-	if p.ResultCode != "" {
-		t.Fatalf("unexpected result code: %s", p.ResultCode)
-	}
 
 	if p.SrcCallsign != "OH7FDN" {
 		t.Errorf("srccallsign = %q, want %q", p.SrcCallsign, "OH7FDN")

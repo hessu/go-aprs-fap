@@ -1,6 +1,7 @@
 package fap
 
 import (
+	"errors"
 	"testing"
 )
 
@@ -14,8 +15,8 @@ func TestBadPacketCorruptedPosition(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error for corrupted position packet")
 	}
-	if p.ResultCode != "loc_inv" {
-		t.Errorf("resultcode = %q, want %q", p.ResultCode, "loc_inv")
+	if !errors.Is(err, ErrLocInvalid) {
+		t.Errorf("error = %v, want %v", err, ErrLocInvalid)
 	}
 	if p.Type != PacketTypeLocation {
 		t.Errorf("type = %q, want %q", p.Type, PacketTypeLocation)
@@ -42,8 +43,8 @@ func TestBadPacketBadSrcCall(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error for bad source callsign")
 	}
-	if p.ResultCode != "srccall_badchars" {
-		t.Errorf("resultcode = %q, want %q", p.ResultCode, "srccall_badchars")
+	if !errors.Is(err, ErrSrcCallBadChars) {
+		t.Errorf("error = %v, want %v", err, ErrSrcCallBadChars)
 	}
 	if p.Type != "" {
 		t.Errorf("type = %q, want empty", p.Type)
@@ -58,8 +59,8 @@ func TestBadPacketBadDigiCall(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error for bad digipeater callsign")
 	}
-	if p.ResultCode != "digicall_badchars" {
-		t.Errorf("resultcode = %q, want %q", p.ResultCode, "digicall_badchars")
+	if !errors.Is(err, ErrDigiCallBadChars) {
+		t.Errorf("error = %v, want %v", err, ErrDigiCallBadChars)
 	}
 	if p.Type != "" {
 		t.Errorf("type = %q, want empty", p.Type)
@@ -70,12 +71,12 @@ func TestBadPacketBadSymbolTable(t *testing.T) {
 	// Bad symbol table character (comma instead of /, \, or overlay)
 	packet := "ASDF>DSALK,OH2RDG*,WIDE:!6028.51N,02505.68E#"
 
-	p, err := Parse(packet)
+	_, err := Parse(packet)
 	if err == nil {
 		t.Fatal("expected error for bad symbol table")
 	}
-	if p.ResultCode != "sym_inv_table" {
-		t.Errorf("resultcode = %q, want %q", p.ResultCode, "sym_inv_table")
+	if !errors.Is(err, ErrSymInvTable) {
+		t.Errorf("error = %v, want %v", err, ErrSymInvTable)
 	}
 }
 
@@ -83,11 +84,11 @@ func TestBadPacketExperimental(t *testing.T) {
 	// Unsupported experimental packet format
 	packet := "ASDF>DSALK,OH2RDG*,WIDE:{{ unsupported experimental format"
 
-	p, err := Parse(packet)
+	_, err := Parse(packet)
 	if err == nil {
 		t.Fatal("expected error for experimental packet")
 	}
-	if p.ResultCode != "exp_unsupp" {
-		t.Errorf("resultcode = %q, want %q", p.ResultCode, "exp_unsupp")
+	if !errors.Is(err, ErrExpUnsupported) {
+		t.Errorf("error = %v, want %v", err, ErrExpUnsupported)
 	}
 }
