@@ -136,7 +136,7 @@ func TestParseCapabilities(t *testing.T) {
 	}
 }
 
-func ExampleParseAPRS() {
+func ExampleParse() {
 	packet := "OH7LZB-2>APRS,WIDE1-1,WIDE2-1,qAo,OH7LZB:!6128.23N/02353.52E-PHG2360/Testing"
 	p, err := Parse(packet)
 	if err != nil {
