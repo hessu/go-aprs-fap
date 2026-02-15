@@ -6,10 +6,6 @@ import (
 
 // Tests ported from perl-aprs-fap/t/53decode-tlm.t
 
-func floatPtr(v float64) *float64 {
-	return &v
-}
-
 func TestTelemetryClassic(t *testing.T) {
 	// Classic packet with one floating point value
 	p, err := Parse("SRCCALL>APRS:T#324,000,038,255,.12,50.12,01000001")
@@ -126,11 +122,11 @@ func TestTelemetryUndefinedMiddle(t *testing.T) {
 		want *float64
 	}
 	checks := []check{
-		{0, floatPtr(1)},
+		{0, new(1.0)},
 		{1, nil},
-		{2, floatPtr(3)},
+		{2, new(3.0)},
 		{3, nil},
-		{4, floatPtr(5)},
+		{4, new(5.0)},
 	}
 	for _, c := range checks {
 		if c.want == nil {

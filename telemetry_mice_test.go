@@ -31,7 +31,7 @@ func TestMicEBase91Telemetry5Ch(t *testing.T) {
 	if len(tlm.Vals) < 5 {
 		t.Fatalf("vals length = %d, want >= 5", len(tlm.Vals))
 	}
-	for i := 0; i < 5; i++ {
+	for i := range 5 {
 		if tlm.Vals[i] == nil {
 			t.Errorf("vals[%d] = nil, want 0", i)
 		} else if *tlm.Vals[i] != 0 {

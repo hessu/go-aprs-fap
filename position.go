@@ -13,11 +13,9 @@ func (p *Packet) parsePositionNoTimestamp(opt *options, typeChar byte) error {
 
 	// '=' indicates messaging capability
 	if typeChar == '=' {
-		t := true
-		p.Messaging = &t
+		p.Messaging = new(true)
 	} else {
-		f := false
-		p.Messaging = &f
+		p.Messaging = new(false)
 	}
 
 	body := p.Body[1:] // skip type character
@@ -38,11 +36,9 @@ func (p *Packet) parsePositionWithTimestamp(opt *options, typeChar byte) error {
 	p.Type = PacketTypeLocation
 
 	if typeChar == '@' {
-		t := true
-		p.Messaging = &t
+		p.Messaging = new(true)
 	} else {
-		f := false
-		p.Messaging = &f
+		p.Messaging = new(false)
 	}
 
 	body := p.Body[1:] // skip type character
@@ -381,8 +377,7 @@ func (p *Packet) parsePositionFallback(opt *options) error {
 	}
 
 	p.Type = PacketTypeLocation
-	f := false
-	p.Messaging = &f
+	p.Messaging = new(false)
 
 	body := p.Body[idx+1:]
 	if len(body) == 0 {

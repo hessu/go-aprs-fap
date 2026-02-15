@@ -21,11 +21,9 @@ func (p *Packet) parseObject(opt *options) error {
 	// Alive/killed indicator
 	aliveChar := body[9]
 	if aliveChar == '*' {
-		t := true
-		p.Alive = &t
+		p.Alive = new(true)
 	} else if aliveChar == '_' {
-		f := false
-		p.Alive = &f
+		p.Alive = new(false)
 	} else {
 		return p.fail(ErrObjInvalid, fmt.Sprintf("invalid object alive/killed indicator: %c", aliveChar))
 	}
@@ -77,11 +75,9 @@ func (p *Packet) parseItem(opt *options) error {
 	p.ItemName = body[:nameEnd]
 
 	if body[nameEnd] == '!' {
-		t := true
-		p.Alive = &t
+		p.Alive = new(true)
 	} else {
-		f := false
-		p.Alive = &f
+		p.Alive = new(false)
 	}
 
 	posBody := body[nameEnd+1:]

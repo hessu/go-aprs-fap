@@ -81,7 +81,7 @@ func (p *Packet) parseMicE(opt *options) error {
 	lonOffset := 0
 	isWest := false
 
-	for i := 0; i < 6; i++ {
+	for i := range 6 {
 		info, ok := micEDestTable[dst[i]]
 		if !ok {
 			return p.fail(ErrMiceInvDstCall, fmt.Sprintf("invalid Mic-E destination character: %c", dst[i]))
@@ -295,7 +295,7 @@ func (p *Packet) parseMicEBase91Telemetry(comment string) string {
 	if pairs >= 7 {
 		bitsVal := (int(tlmData[12])-33)*91 + (int(tlmData[13]) - 33)
 		bits := ""
-		for b := 0; b < 8; b++ {
+		for b := range 8 {
 			if bitsVal&(1<<uint(b)) != 0 {
 				bits += "1"
 			} else {
@@ -436,7 +436,7 @@ func (p *Packet) parseMicEMangled(opt *options) error {
 	lonOffset := 0
 	isWest := false
 
-	for i := 0; i < 6; i++ {
+	for i := range 6 {
 		info, ok := micEDestTable[dst[i]]
 		if !ok {
 			return p.fail(ErrMiceInvDstCall, "invalid Mic-E destination character")

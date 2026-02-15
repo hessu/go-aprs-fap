@@ -221,7 +221,7 @@ func skipWxField(s string, maxLen int) int {
 	if len(s) < maxLen {
 		return 0
 	}
-	for i := 0; i < maxLen; i++ {
+	for i := range maxLen {
 		if s[i] != '.' && s[i] != ' ' {
 			return 0
 		}

@@ -62,5 +62,5 @@ modification. Original expected parsed outcome values must also be used.
 Individual test functions or table-driven tests with `t.Run` subtests,
 using `t.Fatalf`/`t.Errorf` directly.  Table-driven tests are preferred
 when multiple cases share the same assertion logic.
-Helper: `approxEqual(a, b, tolerance)` for float comparison,
-`floatPtr(v)` for pointer creation in tests.
+Helper: `approxEqual(a, b, tolerance)` for float comparison.
+Use `new(val)` for pointer creation in tests.

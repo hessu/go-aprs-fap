@@ -34,12 +34,12 @@ func TestMakePosition(t *testing.T) {
 		},
 		{
 			"NE, has speed/course/alt",
-			52.364, 14.1045, floatPtr(83.34), floatPtr(353), floatPtr(95.7072), "/>", nil,
+			52.364, 14.1045, new(83.34), new(353.0), new(95.7072), "/>", nil,
 			"!5221.84N/01406.27E>353/045/A=000314",
 		},
 		{
 			"NE, no speed/course, has alt",
-			52.364, 14.1045, nil, nil, floatPtr(95.7072), "/>", nil,
+			52.364, 14.1045, nil, nil, new(95.7072), "/>", nil,
 			"!5221.84N/01406.27E>/A=000314",
 		},
 		{
@@ -74,7 +74,7 @@ func TestMakePosition(t *testing.T) {
 		},
 		{
 			"DAO with speed/course/alt/comment",
-			48.37314835164835, 15.71477838827839, floatPtr(62.968), floatPtr(321), floatPtr(192.9384), "/>",
+			48.37314835164835, 15.71477838827839, new(62.968), new(321.0), new(192.9384), "/>",
 			&MakePositionOpts{DAO: true, Comment: "Comment blah"},
 			"!4822.38N/01542.88E>321/034/A=000633Comment blah!wr^!",
 		},

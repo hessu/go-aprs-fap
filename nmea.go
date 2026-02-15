@@ -41,8 +41,7 @@ func (p *Packet) parseNMEA(opt *options) error {
 				if uint8(given) != calculated {
 					return p.fail(ErrNMEAInvalid, "NMEA checksum mismatch")
 				}
-				ok := true
-				p.ChecksumOK = &ok
+				p.ChecksumOK = new(true)
 			}
 		}
 		body = checksumArea

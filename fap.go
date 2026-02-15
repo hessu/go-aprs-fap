@@ -457,7 +457,7 @@ func isIPv6Hex(s string) bool {
 	if len(s) != 32 {
 		return false
 	}
-	for i := 0; i < 32; i++ {
+	for i := range 32 {
 		c := s[i]
 		if !((c >= '0' && c <= '9') || (c >= 'A' && c <= 'F')) {
 			return false
