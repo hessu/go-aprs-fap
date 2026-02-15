@@ -76,6 +76,59 @@ func main() {
 }
 ```
 
+## APRS-IS client
+
+The package includes an APRS-IS TCP client for connecting to APRS-IS
+servers. It is a Go port of the
+[Ham::APRS::IS](https://metacpan.org/pod/Ham::APRS::IS) Perl module.
+
+Do provide the name of your application in place of "myapp", and
+version number in place of "0.1" in the following example.
+
+```go
+package main
+
+import (
+    "fmt"
+    "time"
+    "github.com/hessu/go-aprs-fap"
+)
+
+func main() {
+    c, err := fap.Dial("rotate.aprs2.net:14580", "N0CALL", "-1", "myapp", "0.1", "r/60.18/24.94/100")
+    if err != nil {
+        fmt.Printf("Connect error: %v\n", err)
+        return
+    }
+    defer c.Close()
+
+    for {
+        line, err := c.ReadPacket(30 * time.Second)
+        if err != nil {
+            fmt.Printf("Read error: %v\n", err)
+            return
+        }
+
+        p, err := fap.Parse(line)
+        if err != nil {
+            fmt.Printf("Parse error: %v\n", err)
+            continue
+        }
+
+        fmt.Printf("%s> type=%s\n", p.SrcCallsign, p.Type)
+    }
+}
+```
+
+### Functions
+
+- `fap.Dial(addr, callsign, passcode, appName, appVer, filter...)` — connect, authenticate, and return a `*Conn`
+- `Conn.ReadLine(timeout)` — read one line (strips CR/LF)
+- `Conn.ReadPacket(timeout)` — read one non-comment line (skips `#` keepalives)
+- `Conn.SendLine(line)` — send a line (appends CR/LF)
+- `Conn.Close()` — close the connection
+- `fap.AprsPasscode(callsign)` — compute the APRS-IS passcode for a callsign
+
 ## See also
 
 - [Ham::APRS::FAP](https://metacpan.org/pod/Ham::APRS::FAP) - the original Perl module
