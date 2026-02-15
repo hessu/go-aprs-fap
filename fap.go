@@ -1,8 +1,8 @@
 // Package fap implements an APRS (Automatic Packet Reporting System) packet
 // parser in pure Go. It parses APRS packets in the TNC2 / APRS-IS text format.
 //
-// This is a Go port of the Ham::APRS::FAP Perl module, originally written
-// for the aprs.fi service.
+// This is a Go port of the Ham::APRS::FAP Perl module, which is used by
+// the aprs.fi service.
 //
 // Supported packet types:
 //   - Position (uncompressed, compressed, Mic-E)
