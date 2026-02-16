@@ -65,7 +65,7 @@ func main() {
 			if errors.As(err, &pe) {
 				errCounts[pe.Code]++
 				if *filterError != "" && pe.Code == *filterError {
-					fmt.Println(packet)
+					fmt.Printf("%s [%s]\n", packet, err)
 				}
 			} else {
 				errCounts[err.Error()]++
