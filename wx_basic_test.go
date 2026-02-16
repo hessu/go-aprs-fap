@@ -239,6 +239,59 @@ func TestWxSpaceInWindGust(t *testing.T) {
 	}
 }
 
+func TestWxWaterLevel(t *testing.T) {
+	tests := []struct {
+		name    string
+		packet  string
+		want    string
+		wantNil bool
+	}{
+		{
+			name:   "positive water level",
+			packet: "N0CALL>APRS,TCPIP*:_12032359c000s000g000t033F0123",
+			want:   fmt.Sprintf("%.4f", 123.0/10.0*0.3048),
+		},
+		{
+			name:   "negative water level",
+			packet: "N0CALL>APRS,TCPIP*:_12032359c000s000g000t033F-042",
+			want:   fmt.Sprintf("%.4f", -42.0/10.0*0.3048),
+		},
+		{
+			name:    "missing water level",
+			packet:  "N0CALL>APRS,TCPIP*:_12032359c000s000g000t033F....",
+			wantNil: true,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			p, err := Parse(tc.packet)
+			if err != nil {
+				t.Fatalf("failed to parse packet: %v", err)
+			}
+
+			wx := p.Wx
+			if wx == nil {
+				t.Fatalf("wx is nil")
+			}
+
+			if tc.wantNil {
+				if wx.WaterLevel != nil {
+					t.Errorf("water_level = %v, want nil", *wx.WaterLevel)
+				}
+				return
+			}
+
+			if wx.WaterLevel == nil {
+				t.Fatalf("water_level is nil, want %s", tc.want)
+			}
+			if got := fmt.Sprintf("%.4f", *wx.WaterLevel); got != tc.want {
+				t.Errorf("water_level = %s, want %s", got, tc.want)
+			}
+		})
+	}
+}
+
 func TestWxPositionlessWithSnowfall(t *testing.T) {
 	packet := "JH9YVX>APU25N,TCPIP*,qAC,T2TOKYO3:_12032359c180s001g002t033r010p040P080b09860h98Os010L500"
 

@@ -177,6 +177,14 @@ func parseWeatherFields(data string, wx *Weather) {
 					consumed = 2 + n
 				}
 			}
+		case 'F': // Water level (signed, tenths of a foot, convert to meters)
+			if val, n := parseWxSignedInt(data[i+1:], 4); n > 0 {
+				v := float64(val) / 10.0 * 0.3048
+				wx.WaterLevel = &v
+				consumed = 1 + n
+			} else if n := skipWxField(data[i+1:], 4); n > 0 {
+				consumed = 1 + n
+			}
 		case '#': // Raw rain counter
 			if n := skipWxField(data[i+1:], 3); n > 0 {
 				consumed = 1 + n
