@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"runtime/pprof"
+	"sort"
 	"strings"
 	"time"
 
@@ -34,6 +35,7 @@ func main() {
 	scanner.Buffer(make([]byte, 1024*1024), 1024*1024)
 
 	var ok, fail int
+	errCounts := make(map[string]int)
 
 	start := time.Now()
 
@@ -44,6 +46,7 @@ func main() {
 		idx := strings.IndexByte(line, ' ')
 		if idx < 0 {
 			fail++
+			errCounts["no space in line"]++
 			continue
 		}
 		packet := line[idx+1:]
@@ -51,6 +54,7 @@ func main() {
 		_, err := fap.Parse(packet)
 		if err != nil {
 			fail++
+			errCounts[err.Error()]++
 		} else {
 			ok++
 		}
@@ -68,4 +72,23 @@ func main() {
 
 	fmt.Printf("Parsed %d packets in %.3f seconds (%.0f packets/sec)\n", total, secs, rate)
 	fmt.Printf("  OK: %d  Failed: %d\n", ok, fail)
+
+	if len(errCounts) > 0 {
+		type errEntry struct {
+			msg   string
+			count int
+		}
+		entries := make([]errEntry, 0, len(errCounts))
+		for msg, count := range errCounts {
+			entries = append(entries, errEntry{msg, count})
+		}
+		sort.Slice(entries, func(i, j int) bool {
+			return entries[i].count > entries[j].count
+		})
+
+		fmt.Printf("\nError summary (%d unique errors):\n", len(errCounts))
+		for _, e := range entries {
+			fmt.Printf("  %6d  %s\n", e.count, e.msg)
+		}
+	}
 }
