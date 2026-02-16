@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"errors"
 	"flag"
 	"fmt"
 	"os"
@@ -15,6 +16,8 @@ import (
 
 func main() {
 	cpuprofile := flag.String("cpuprofile", "", "write CPU profile to file")
+	filterError := flag.String("e", "", "print packets having the specified error code")
+	flag.StringVar(filterError, "error", "", "print packets having the specified error code")
 	flag.Parse()
 
 	if *cpuprofile != "" {
@@ -34,7 +37,7 @@ func main() {
 	scanner := bufio.NewScanner(os.Stdin)
 	scanner.Buffer(make([]byte, 1024*1024), 1024*1024)
 
-	var ok, fail int
+	var ok, unsupported, fail int
 	errCounts := make(map[string]int)
 
 	start := time.Now()
@@ -53,8 +56,20 @@ func main() {
 
 		_, err := fap.Parse(packet)
 		if err != nil {
-			fail++
-			errCounts[err.Error()]++
+			if errors.Is(err, fap.ErrTypeNotSupported) {
+				unsupported++
+			} else {
+				fail++
+			}
+			var pe *fap.ParseError
+			if errors.As(err, &pe) {
+				errCounts[pe.Code]++
+				if *filterError != "" && pe.Code == *filterError {
+					fmt.Println(packet)
+				}
+			} else {
+				errCounts[err.Error()]++
+			}
 		} else {
 			ok++
 		}
@@ -66,12 +81,12 @@ func main() {
 	}
 
 	elapsed := time.Since(start)
-	total := ok + fail
+	total := ok + unsupported + fail
 	secs := elapsed.Seconds()
 	rate := float64(total) / secs
 
 	fmt.Printf("Parsed %d packets in %.3f seconds (%.0f packets/sec)\n", total, secs, rate)
-	fmt.Printf("  OK: %d  Failed: %d\n", ok, fail)
+	fmt.Printf("  OK: %d (%d unsupported), Failed: %d\n", ok+unsupported, unsupported, fail)
 
 	if len(errCounts) > 0 {
 		type errEntry struct {
