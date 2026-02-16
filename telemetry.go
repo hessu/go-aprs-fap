@@ -1,13 +1,40 @@
 package fap
 
 import (
-	"regexp"
 	"strconv"
 	"strings"
 )
 
-// telemetryValueRe matches valid telemetry values (numbers, optionally negative and/or floating point)
-var telemetryValueRe = regexp.MustCompile(`^-?[0-9]*\.?[0-9]+$`)
+// isNumericValue reports whether s matches ^-?[0-9]*\.?[0-9]+$
+// i.e. an optional minus, optional leading digits, optional dot, then at least one digit.
+func isNumericValue(s string) bool {
+	if len(s) == 0 {
+		return false
+	}
+	i := 0
+	if s[i] == '-' {
+		i++
+	}
+	// Optional leading digits
+	for i < len(s) && s[i] >= '0' && s[i] <= '9' {
+		i++
+	}
+	if i == len(s) {
+		// No dot — need at least one digit after the optional minus
+		return i > 0 && s[i-1] >= '0' && s[i-1] <= '9'
+	}
+	// Optional dot
+	if s[i] != '.' {
+		return false
+	}
+	i++
+	// Required trailing digits (at least one)
+	start := i
+	for i < len(s) && s[i] >= '0' && s[i] <= '9' {
+		i++
+	}
+	return i == len(s) && i > start
+}
 
 // parseTelemetry parses an APRS telemetry packet.
 // Format: T#seq,a1,a2,a3,a4,a5,bbbbbbbb
@@ -35,7 +62,7 @@ func (p *Packet) parseTelemetry(opt *options) error {
 		}
 
 		// Validate the field format
-		if !telemetryValueRe.MatchString(field) {
+		if !isNumericValue(field) {
 			// Check for specific invalid patterns
 			if field == "-" || strings.HasSuffix(field, ".") {
 				return p.fail(ErrTlmInvalid, "invalid telemetry value: "+field)

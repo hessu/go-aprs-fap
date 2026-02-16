@@ -17,8 +17,6 @@
 package fap
 
 import (
-	"regexp"
-	"strconv"
 	"strings"
 	"time"
 )
@@ -396,23 +394,53 @@ func (p *Packet) parseBody(opt *options) error {
 
 // CheckAX25Call validates and normalizes an AX.25 callsign.
 // Returns the normalized callsign (with SSID if present) or empty string if invalid.
-var ax25CallRe = regexp.MustCompile(`^([A-Z0-9]{1,6})(-\d{1,2})?$`)
-
 func CheckAX25Call(call string) string {
-	m := ax25CallRe.FindStringSubmatch(strings.ToUpper(call))
-	if m == nil {
+	s := strings.ToUpper(call)
+
+	// Split base callsign and optional SSID at dash
+	base := s
+	ssidStr := ""
+	if i := strings.IndexByte(s, '-'); i >= 0 {
+		base = s[:i]
+		ssidStr = s[i+1:]
+		// If there was a dash with nothing after it, that's invalid.
+		if ssidStr == "" {
+			return ""
+		}
+	}
+
+	// Base must be 1-6 alphanumeric characters
+	if len(base) < 1 || len(base) > 6 {
 		return ""
 	}
-	base := m[1]
-	if m[2] == "" {
+	for i := 0; i < len(base); i++ {
+		c := base[i]
+		if !((c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9')) {
+			return ""
+		}
+	}
+
+	if ssidStr == "" {
 		return base
 	}
-	// Parse the SSID (strip the leading dash)
-	ssid, _ := strconv.Atoi(m[2][1:])
+
+	// SSID must be 1-2 digits, value 0-15
+	if len(ssidStr) < 1 || len(ssidStr) > 2 {
+		return ""
+	}
+	ssid := 0
+	for i := 0; i < len(ssidStr); i++ {
+		c := ssidStr[i]
+		if c < '0' || c > '9' {
+			return ""
+		}
+		ssid = ssid*10 + int(c-'0')
+	}
 	if ssid > 15 {
 		return ""
 	}
-	return base + "-" + strconv.Itoa(ssid)
+
+	return base + "-" + ssidStr
 }
 
 // isAlnumDash reports whether s is 1–9 characters of [A-Za-z0-9-].

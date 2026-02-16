@@ -157,6 +157,83 @@ func TestTelemetryPartiallyCorrect(t *testing.T) {
 	}
 }
 
+func TestIsNumericValue(t *testing.T) {
+	tests := []struct {
+		input string
+		want  bool
+	}{
+		// Valid integers
+		{"0", true},
+		{"1", true},
+		{"42", true},
+		{"123456789", true},
+
+		// Valid negative integers
+		{"-1", true},
+		{"-42", true},
+
+		// Valid floats
+		{"0.5", true},
+		{"3.14", true},
+		{".5", true},
+		{".123", true},
+		{"0.000001", true},
+
+		// Valid negative floats
+		{"-0.5", true},
+		{"-.5", true},
+		{"-0.0000001", true},
+
+		// Valid: leading digits before dot
+		{"123.456", true},
+		{"2147483647", true},
+
+		// Invalid: empty
+		{"", false},
+
+		// Invalid: bare minus
+		{"-", false},
+
+		// Invalid: trailing dot, no digits after
+		{"1.", false},
+		{"-1.", false},
+		{"0.", false},
+
+		// Invalid: bare dot
+		{".", false},
+		{"-.", false},
+
+		// Invalid: letters
+		{"abc", false},
+		{"1a", false},
+		{"a1", false},
+		{"-a", false},
+
+		// Invalid: spaces
+		{" 1", false},
+		{"1 ", false},
+		{" ", false},
+
+		// Invalid: multiple dots
+		{"1.2.3", false},
+
+		// Invalid: multiple minuses
+		{"--1", false},
+
+		// Invalid: minus not at start
+		{"1-2", false},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.input, func(t *testing.T) {
+			got := isNumericValue(tc.input)
+			if got != tc.want {
+				t.Errorf("isNumericValue(%q) = %v, want %v", tc.input, got, tc.want)
+			}
+		})
+	}
+}
+
 func TestTelemetryInvalidDash(t *testing.T) {
 	// Invalid: bare '-' with no number
 	_, err := Parse("SRCCALL>APRS:T#1,1,-,3")
