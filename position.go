@@ -1,11 +1,15 @@
 package fap
 
 import (
+	"errors"
 	"fmt"
 	"math"
 	"strconv"
 	"strings"
 )
+
+// errAmbiguityInvalid is an internal sentinel for ambiguity validation failures.
+var errAmbiguityInvalid = errors.New("invalid position ambiguity")
 
 // parsePositionNoTimestamp parses position packets without timestamps (! and =).
 func (p *Packet) parsePositionNoTimestamp(opt *options, typeChar byte) error {
@@ -80,6 +84,9 @@ func (p *Packet) parseUncompressedPosition(body string, opt *options) error {
 	// Parse latitude: DDMM.MMN
 	lat, ambiguity, err := parseUncompressedLat(body[:8])
 	if err != nil {
+		if errors.Is(err, errAmbiguityInvalid) {
+			return p.fail(ErrPosAmbiguity, err.Error())
+		}
 		return p.fail(ErrLocInvalid, fmt.Sprintf("invalid latitude: %v", err))
 	}
 
@@ -97,6 +104,9 @@ func (p *Packet) parseUncompressedPosition(body string, opt *options) error {
 	// Parse longitude: DDDMM.MMW
 	lon, err := parseUncompressedLon(body[9:18], ambiguity)
 	if err != nil {
+		if errors.Is(err, errAmbiguityInvalid) {
+			return p.fail(ErrPosAmbiguity, err.Error())
+		}
 		return p.fail(ErrPosLonInvalid, fmt.Sprintf("invalid longitude: %v", err))
 	}
 	p.Longitude = &lon
@@ -450,6 +460,21 @@ func parseDegreesMinutes(s string, degDigits int, computeAmbiguity bool, knownAm
 				ambiguity++
 			} else {
 				break
+			}
+		}
+		// Verify no spaces exist before the trailing ambiguity block
+		for i := 0; i < 4-ambiguity; i++ {
+			if isSpace[i] {
+				return 0, 0, 0, fmt.Errorf("%w: space in non-trailing position", errAmbiguityInvalid)
+			}
+		}
+	} else {
+		// Longitude: the non-ambiguous portion must not contain spaces.
+		// The ambiguous portion (trailing digits) may or may not have spaces —
+		// APRS101 says ambiguity from latitude applies automatically to longitude.
+		for i := 0; i < 4-ambiguity; i++ {
+			if isSpace[i] {
+				return 0, 0, 0, fmt.Errorf("%w: longitude has spaces in non-ambiguous digits", errAmbiguityInvalid)
 			}
 		}
 	}

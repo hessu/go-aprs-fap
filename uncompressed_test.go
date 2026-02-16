@@ -1,6 +1,7 @@
 package fap
 
 import (
+	"errors"
 	"fmt"
 	"testing"
 )
@@ -114,6 +115,44 @@ func TestUncompressedAmbiguity4(t *testing.T) {
 	}
 	if got := fmt.Sprintf("%.0f", *p.PosResolution); got != "111120" {
 		t.Errorf("posresolution = %s, want 111120", got)
+	}
+}
+
+func TestUncompressedAmbiguityUnbalanced(t *testing.T) {
+	packet := "SRC>APRS,TCPIP*,qAC,T2POLAND:;SPBLTZ   *010020z5210.  N/021  .  E? Comment"
+
+	_, err := Parse(packet)
+	if err == nil {
+		t.Fatal("Parsed packet with invalid ambiguity")
+	}
+	if !errors.Is(err, ErrPosAmbiguity) {
+		t.Errorf("error = %v, want %v", err, ErrPosAmbiguity)
+	}
+}
+
+func TestUncompressedAmbiguityLonMoreDigits(t *testing.T) {
+	// Latitude has ambiguity 1 (last digit is space), longitude has all digits.
+	// Per APRS101, ambiguity from latitude applies automatically to longitude,
+	// so longitude's last digit gets centered and posresolution comes from latitude.
+	packet := "OH2RDP-1>BEACON-15:!5210.5 N/02101.73E#Comment here"
+
+	p, err := Parse(packet)
+	if err != nil {
+		t.Fatalf("failed to parse: %v", err)
+	}
+	if p.PosAmbiguity == nil || *p.PosAmbiguity != 1 {
+		t.Errorf("posambiguity = %v, want 1", p.PosAmbiguity)
+	}
+	if got := fmt.Sprintf("%.1f", *p.PosResolution); got != "185.2" {
+		t.Errorf("posresolution = %s, want 185.2", got)
+	}
+	// lat: mm=10.50 centered to 10.55, lat = 52 + 10.55/60
+	if got := fmt.Sprintf("%.4f", *p.Latitude); got != "52.1758" {
+		t.Errorf("latitude = %s, want 52.1758", got)
+	}
+	// lon: mm=1.73 centered to 1.75, lon = 21 + 1.75/60
+	if got := fmt.Sprintf("%.4f", *p.Longitude); got != "21.0292" {
+		t.Errorf("longitude = %s, want 21.0292", got)
 	}
 }
 

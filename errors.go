@@ -43,7 +43,7 @@ var (
 	ErrExpUnsupported   = &ParseError{Code: "exp_unsupp"}
 
 	// Position errors
-	ErrPosAmbiguity  = &ParseError{Code: "pos_ambiguity"}
+	ErrPosAmbiguity  = &ParseError{Code: "loc_amb_inv"}
 	ErrPosShort      = &ParseError{Code: "pos_short"}
 	ErrPosInvalid    = &ParseError{Code: "pos_invalid"}
 	ErrPosLatInvalid = &ParseError{Code: "pos_lat_invalid"}
