@@ -24,8 +24,8 @@ func TestMicEBase91Telemetry5Ch(t *testing.T) {
 		t.Fatal("no telemetry data")
 	}
 
-	if tlm.Seq != "0" {
-		t.Errorf("seq = %q, want %q", tlm.Seq, "0")
+	if tlm.Seq != 0 {
+		t.Errorf("seq = %d, want %d", tlm.Seq, 0)
 	}
 
 	if len(tlm.Vals) < 5 {
@@ -61,8 +61,8 @@ func TestMicEBase91Telemetry1Ch(t *testing.T) {
 		t.Fatal("no telemetry data")
 	}
 
-	if tlm.Seq != "0" {
-		t.Errorf("seq = %q, want %q", tlm.Seq, "0")
+	if tlm.Seq != 0 {
+		t.Errorf("seq = %d, want %d", tlm.Seq, 0)
 	}
 
 	if len(tlm.Vals) < 5 {

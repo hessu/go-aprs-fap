@@ -18,8 +18,8 @@ func TestTelemetryClassic(t *testing.T) {
 	}
 
 	tlm := p.TelemetryData
-	if tlm.Seq != "324" {
-		t.Errorf("seq = %q, want %q", tlm.Seq, "324")
+	if tlm.Seq != 324 {
+		t.Errorf("seq = %d, want %d", tlm.Seq, 324)
 	}
 	if tlm.Bits != "01000001" {
 		t.Errorf("bits = %q, want %q", tlm.Bits, "01000001")
@@ -49,8 +49,8 @@ func TestTelemetryRelaxed(t *testing.T) {
 	if tlm == nil {
 		t.Fatal("no telemetry data")
 	}
-	if tlm.Seq != "1" {
-		t.Errorf("seq = %q, want %q", tlm.Seq, "1")
+	if tlm.Seq != 1 {
+		t.Errorf("seq = %d, want %d", tlm.Seq, 1)
 	}
 	if tlm.Bits != "01000001" {
 		t.Errorf("bits = %q, want %q", tlm.Bits, "01000001")
@@ -77,8 +77,8 @@ func TestTelemetryShort(t *testing.T) {
 	if tlm == nil {
 		t.Fatal("no telemetry data")
 	}
-	if tlm.Seq != "001" {
-		t.Errorf("seq = %q, want %q", tlm.Seq, "001")
+	if tlm.Seq != 1 {
+		t.Errorf("seq = %d, want %d", tlm.Seq, 1)
 	}
 	if tlm.Bits != "" {
 		t.Errorf("bits = %q, want empty", tlm.Bits)

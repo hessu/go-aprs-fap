@@ -280,7 +280,7 @@ func (p *Packet) parseMicEBase91Telemetry(comment string) string {
 	seq := (int(tlmData[0])-33)*91 + (int(tlmData[1]) - 33)
 
 	tlm := &Telemetry{
-		Seq: strconv.Itoa(seq),
+		Seq: seq,
 	}
 
 	// Remaining pairs are values (up to 5)

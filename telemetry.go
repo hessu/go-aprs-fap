@@ -49,7 +49,11 @@ func (p *Packet) parseTelemetry(opt *options) error {
 	}
 
 	tlm := &Telemetry{}
-	tlm.Seq = parts[0]
+	seq, err := strconv.Atoi(parts[0])
+	if err != nil {
+		return p.fail(ErrTlmInvalid, "invalid telemetry sequence number: "+parts[0])
+	}
+	tlm.Seq = seq
 
 	// Parse analog values (up to 5)
 	// Values can be: numeric (int or float), empty (undefined), or invalid (treated as end of values)

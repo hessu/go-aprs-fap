@@ -73,7 +73,7 @@ type Weather struct {
 
 // Telemetry contains telemetry data.
 type Telemetry struct {
-	Seq  string     // Sequence number
+	Seq  int        // Sequence number
 	Vals []*float64 // Analog values (nil = undefined)
 	Bits string     // Digital bits (8-bit string)
 }
