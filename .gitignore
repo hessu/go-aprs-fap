@@ -1,4 +1,11 @@
 
+# backup files
 *~
+
+# produced binaries
+parse-speed-test
+
+# logs
+*.log
 
 

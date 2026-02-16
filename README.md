@@ -15,6 +15,16 @@ stream in real time, and is used to power the <http://aprs.fi/> web site.
 But nobody actually tested or used this Go port yet. I have no clue whether
 it works.
 
+## Performance
+
+The Go port parses packets 12.7 times faster than the original Perl version.
+For a constant incoming stream of packets, it uses about 8% of the CPU used
+by the Perl parser.  This was tested by parsing the same 24-hour log of
+APRS-IS packets using both parsers.
+
+On an old Intel Xeon L5520 CPU @ 2.27GHz (8 MB cache), it does about 156k
+packets/second, which is sufficient for my current needs.
+
 ## AI-assisted port
 
 This Go module was created using the Claude Code AI agent, by letting it
