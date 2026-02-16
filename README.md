@@ -175,6 +175,7 @@ func main() {
 ## Copyright and licence
 
 Copyright (C) 2005-2026 Tapio Sokura, OH2KKU
+
 Copyright (C) 2007-2026 Heikki Hannikainen, OH7LZB
 
 This library is free software; you can redistribute it and/or modify
