@@ -177,12 +177,24 @@ func parseWeatherFields(data string, wx *Weather) {
 					consumed = 2 + n
 				}
 			}
+		// Water level, radiation and battery voltage extensions are defined
+		// in: https://www.aprs.org/aprs12/weather-new.txt
 		case 'F': // Water level (signed, tenths of a foot, convert to meters)
 			if val, n := parseWxSignedInt(data[i+1:], 4); n > 0 {
 				v := float64(val) / 10.0 * 0.3048
 				wx.WaterLevel = &v
 				consumed = 1 + n
 			} else if n := skipWxField(data[i+1:], 4); n > 0 {
+				consumed = 1 + n
+			}
+		case 'X': // Ionizing radiation (nanosieverts/hr, resistor code: AB*10^C)
+			if val, n := parseWxInt(data[i+1:], 3); n > 0 {
+				sig := val / 10 // first two digits
+				exp := val % 10 // last digit is exponent
+				v := float64(sig) * math.Pow(10, float64(exp))
+				wx.Radiation = &v
+				consumed = 1 + n
+			} else if n := skipWxField(data[i+1:], 3); n > 0 {
 				consumed = 1 + n
 			}
 		case 'V': // Battery voltage (tenths of volts)

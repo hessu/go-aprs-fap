@@ -292,6 +292,64 @@ func TestWxWaterLevel(t *testing.T) {
 	}
 }
 
+func TestWxRadiation(t *testing.T) {
+	tests := []struct {
+		name    string
+		packet  string
+		want    float64
+		wantNil bool
+	}{
+		{
+			name:   "12 microsieverts/hr",
+			packet: "N0CALL>APRS,TCPIP*:_12032359c000s000g000t033X123",
+			want:   12000.0, // 12 * 10^3 nSv/hr
+		},
+		{
+			name:   "45 millisieverts/hr",
+			packet: "N0CALL>APRS,TCPIP*:_12032359c000s000g000t033X456",
+			want:   45000000.0, // 45 * 10^6 nSv/hr
+		},
+		{
+			name:   "zero exponent",
+			packet: "N0CALL>APRS,TCPIP*:_12032359c000s000g000t033X100",
+			want:   10.0, // 10 * 10^0 nSv/hr
+		},
+		{
+			name:    "missing radiation",
+			packet:  "N0CALL>APRS,TCPIP*:_12032359c000s000g000t033X...",
+			wantNil: true,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			p, err := Parse(tc.packet)
+			if err != nil {
+				t.Fatalf("failed to parse packet: %v", err)
+			}
+
+			wx := p.Wx
+			if wx == nil {
+				t.Fatalf("wx is nil")
+			}
+
+			if tc.wantNil {
+				if wx.Radiation != nil {
+					t.Errorf("radiation = %v, want nil", *wx.Radiation)
+				}
+				return
+			}
+
+			if wx.Radiation == nil {
+				t.Fatalf("radiation is nil, want %v", tc.want)
+			}
+			if got := fmt.Sprintf("%.4f", *wx.Radiation); got != fmt.Sprintf("%.4f", tc.want) {
+				t.Errorf("radiation = %s, want %.4f", got, tc.want)
+			}
+		})
+	}
+}
+
 func TestWxBatteryVoltage(t *testing.T) {
 	tests := []struct {
 		name    string
