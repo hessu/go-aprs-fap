@@ -185,6 +185,14 @@ func parseWeatherFields(data string, wx *Weather) {
 			} else if n := skipWxField(data[i+1:], 4); n > 0 {
 				consumed = 1 + n
 			}
+		case 'V': // Battery voltage (tenths of volts)
+			if val, n := parseWxInt(data[i+1:], 3); n > 0 {
+				v := float64(val) / 10.0
+				wx.BatteryVoltage = &v
+				consumed = 1 + n
+			} else if n := skipWxField(data[i+1:], 3); n > 0 {
+				consumed = 1 + n
+			}
 		case '#': // Raw rain counter
 			if n := skipWxField(data[i+1:], 3); n > 0 {
 				consumed = 1 + n

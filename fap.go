@@ -68,6 +68,7 @@ type Weather struct {
 	Snow24h        *float64 // Snow in the last 24 hours in mm
 	Luminosity     *int     // Luminosity in watts per square meter
 	WaterLevel     *float64 // Water level above or below flood stage in meters
+	BatteryVoltage *float64 // Battery voltage, in V
 	Software       string   // Software / device identifier
 	commentAfterWx string   // internal: non-weather comment text after weather data
 }

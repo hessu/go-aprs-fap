@@ -292,6 +292,54 @@ func TestWxWaterLevel(t *testing.T) {
 	}
 }
 
+func TestWxBatteryVoltage(t *testing.T) {
+	tests := []struct {
+		name    string
+		packet  string
+		want    string
+		wantNil bool
+	}{
+		{
+			name:   "battery voltage",
+			packet: "N0CALL>APRS,TCPIP*:_12032359c000s000g000t033V128",
+			want:   fmt.Sprintf("%.1f", 128.0/10.0),
+		},
+		{
+			name:    "missing battery voltage",
+			packet:  "N0CALL>APRS,TCPIP*:_12032359c000s000g000t033V...",
+			wantNil: true,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			p, err := Parse(tc.packet)
+			if err != nil {
+				t.Fatalf("failed to parse packet: %v", err)
+			}
+
+			wx := p.Wx
+			if wx == nil {
+				t.Fatalf("wx is nil")
+			}
+
+			if tc.wantNil {
+				if wx.BatteryVoltage != nil {
+					t.Errorf("battery_voltage = %v, want nil", *wx.BatteryVoltage)
+				}
+				return
+			}
+
+			if wx.BatteryVoltage == nil {
+				t.Fatalf("battery_voltage is nil, want %s", tc.want)
+			}
+			if got := fmt.Sprintf("%.1f", *wx.BatteryVoltage); got != tc.want {
+				t.Errorf("battery_voltage = %s, want %s", got, tc.want)
+			}
+		})
+	}
+}
+
 func TestWxPositionlessWithSnowfall(t *testing.T) {
 	packet := "JH9YVX>APU25N,TCPIP*,qAC,T2TOKYO3:_12032359c180s001g002t033r010p040P080b09860h98Os010L500"
 
