@@ -17,12 +17,12 @@ it works.
 
 ## Performance
 
-The Go port parses packets 16 times faster than the original Perl version.
-For a constant incoming stream of packets, it uses about 6% of the CPU used
+The Go port parses packets 19 times faster than the original Perl version.
+For a constant incoming stream of packets, it uses about 5% of the CPU used
 by the Perl parser.  This was tested by parsing the same 24-hour log of
 APRS-IS packets using both parsers.
 
-On an old Intel Xeon L5520 CPU @ 2.27GHz (8 MB cache), it does about 200k
+On an old Intel Xeon L5520 CPU @ 2.27GHz (8 MB cache), it does about 230k
 packets/second, which is sufficient for my current needs.
 
 ## AI-assisted port

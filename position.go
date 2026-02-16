@@ -392,45 +392,70 @@ func (p *Packet) parsePositionFallback(opt *options) error {
 
 // parseUncompressedLat parses an uncompressed latitude string "DDMM.MMN".
 // Returns latitude in decimal degrees and ambiguity level.
-func parseUncompressedLat(s string) (float64, int, error) {
-	if len(s) != 8 {
-		return 0, 0, fmt.Errorf("latitude must be 8 characters, got %d", len(s))
+// digitOrSpace reads a digit from s[i], treating space as 0.
+// Returns the digit value and whether it was a space (for ambiguity counting).
+func digitOrSpace(s string, i int) (int, bool, error) {
+	c := s[i]
+	if c == ' ' {
+		return 0, true, nil
+	}
+	if c >= '0' && c <= '9' {
+		return int(c - '0'), false, nil
+	}
+	return 0, false, fmt.Errorf("invalid character at position %d: %c", i, c)
+}
+
+// parseDegreesMinutes parses a DDMM.MM or DDDMM.MM string directly from characters,
+// counting ambiguity (trailing spaces in minute digits, right to left).
+// degDigits is 2 for latitude, 3 for longitude.
+// For longitude, ambiguity is passed in from latitude; for latitude it is computed.
+func parseDegreesMinutes(s string, degDigits int, computeAmbiguity bool, knownAmbiguity int) (float64, float64, int, error) {
+	// Parse degree digits
+	deg := 0.0
+	for i := 0; i < degDigits; i++ {
+		d, _, err := digitOrSpace(s, i)
+		if err != nil {
+			return 0, 0, 0, fmt.Errorf("invalid degrees: %v", err)
+		}
+		deg = deg*10 + float64(d)
 	}
 
-	hemisphere := s[7]
-	if hemisphere != 'N' && hemisphere != 'S' {
-		return 0, 0, fmt.Errorf("invalid hemisphere: %c", hemisphere)
+	// Format after degrees: MM.MM
+	// Minute digit positions relative to degDigits: +0, +1, +2(dot), +3, +4
+	dotPos := degDigits + 2
+	if s[dotPos] != '.' && s[dotPos] != ' ' {
+		return 0, 0, 0, fmt.Errorf("expected dot at position %d, got %c", dotPos, s[dotPos])
 	}
 
-	// Count ambiguity (spaces in the numeric portion)
-	ambiguity := 0
-	latStr := []byte(s[:7])
-	// Check from right to left for spaces
-	// Format: DDMM.MM - positions 6,5,(skip dot at 4),3,2 can be spaces
-	positions := []int{6, 5, 3, 2}
-	for _, pos := range positions {
-		if latStr[pos] == ' ' {
-			ambiguity++
-			latStr[pos] = '0'
-		} else {
-			break
+	// Parse the 4 minute digits (2 before dot, 2 after)
+	// Positions: degDigits, degDigits+1, degDigits+3, degDigits+4
+	minPositions := []int{degDigits, degDigits + 1, degDigits + 3, degDigits + 4}
+	var minDigits [4]int
+	var isSpace [4]bool
+	for i, pos := range minPositions {
+		d, sp, err := digitOrSpace(s, pos)
+		if err != nil {
+			return 0, 0, 0, fmt.Errorf("invalid minutes: %v", err)
+		}
+		minDigits[i] = d
+		isSpace[i] = sp
+	}
+
+	// Count ambiguity: spaces from right
+	ambiguity := knownAmbiguity
+	if computeAmbiguity {
+		ambiguity = 0
+		for i := 3; i >= 0; i-- {
+			if isSpace[i] {
+				ambiguity++
+			} else {
+				break
+			}
 		}
 	}
 
-	// Also handle the dot position being a space (shouldn't happen but be safe)
-	if latStr[4] == ' ' {
-		latStr[4] = '.'
-	}
-
-	str := string(latStr)
-	dd, err := strconv.ParseFloat(str[:2], 64)
-	if err != nil {
-		return 0, 0, fmt.Errorf("invalid degrees: %v", err)
-	}
-	mm, err := strconv.ParseFloat(str[2:], 64)
-	if err != nil {
-		return 0, 0, fmt.Errorf("invalid minutes: %v", err)
-	}
+	// Build minutes as MM.MM
+	mm := float64(minDigits[0])*10 + float64(minDigits[1]) + float64(minDigits[2])*0.1 + float64(minDigits[3])*0.01
 
 	// For ambiguous positions, center in the ambiguity box
 	if ambiguity > 0 {
@@ -442,9 +467,27 @@ func parseUncompressedLat(s string) (float64, int, error) {
 		case 3:
 			mm = math.Floor(mm/10)*10 + 5
 		case 4:
-			dd = math.Floor(dd)
+			deg = math.Floor(deg)
 			mm = 30
 		}
+	}
+
+	return deg, mm, ambiguity, nil
+}
+
+func parseUncompressedLat(s string) (float64, int, error) {
+	if len(s) != 8 {
+		return 0, 0, fmt.Errorf("latitude must be 8 characters, got %d", len(s))
+	}
+
+	hemisphere := s[7]
+	if hemisphere != 'N' && hemisphere != 'S' {
+		return 0, 0, fmt.Errorf("invalid hemisphere: %c", hemisphere)
+	}
+
+	dd, mm, ambiguity, err := parseDegreesMinutes(s[:7], 2, true, 0)
+	if err != nil {
+		return 0, 0, err
 	}
 
 	lat := dd + mm/60.0
@@ -471,39 +514,9 @@ func parseUncompressedLon(s string, ambiguity int) (float64, error) {
 		return 0, fmt.Errorf("invalid hemisphere: %c", hemisphere)
 	}
 
-	// Apply same ambiguity as latitude
-	lonStr := []byte(s[:8])
-	positions := []int{7, 6, 4, 3}
-	for i := 0; i < ambiguity && i < len(positions); i++ {
-		lonStr[positions[i]] = '0'
-	}
-
-	if lonStr[5] == ' ' {
-		lonStr[5] = '.'
-	}
-
-	str := string(lonStr)
-	ddd, err := strconv.ParseFloat(str[:3], 64)
+	ddd, mm, _, err := parseDegreesMinutes(s[:8], 3, false, ambiguity)
 	if err != nil {
-		return 0, fmt.Errorf("invalid degrees: %v", err)
-	}
-	mm, err := strconv.ParseFloat(str[3:], 64)
-	if err != nil {
-		return 0, fmt.Errorf("invalid minutes: %v", err)
-	}
-
-	if ambiguity > 0 {
-		switch ambiguity {
-		case 1:
-			mm = math.Floor(mm/0.1)*0.1 + 0.05
-		case 2:
-			mm = math.Floor(mm) + 0.5
-		case 3:
-			mm = math.Floor(mm/10)*10 + 5
-		case 4:
-			ddd = math.Floor(ddd)
-			mm = 30
-		}
+		return 0, err
 	}
 
 	lon := ddd + mm/60.0
