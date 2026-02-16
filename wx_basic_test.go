@@ -66,8 +66,8 @@ func TestWxBasic(t *testing.T) {
 		t.Errorf("rain_midnight = %s, want 0.5", got)
 	}
 
-	if wx.Soft != "XRSW" {
-		t.Errorf("soft = %q, want %q", wx.Soft, "XRSW")
+	if wx.Software != "XRSW" {
+		t.Errorf("soft = %q, want %q", wx.Software, "XRSW")
 	}
 }
 

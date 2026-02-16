@@ -191,7 +191,7 @@ func parseWeatherFields(data string, wx *Weather) {
 			// Not a recognized weather field - remaining text is comment or software ID
 			remaining := strings.TrimSpace(data[i:])
 			if isSoftwareID(remaining) {
-				wx.Soft = remaining
+				wx.Software = remaining
 			} else {
 				wx.commentAfterWx = remaining
 			}

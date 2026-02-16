@@ -67,7 +67,7 @@ type Weather struct {
 	RainMidnight   *float64 // Rain since midnight in mm
 	Snow24h        *float64 // Snow in the last 24 hours in mm
 	Luminosity     *int     // Luminosity in watts per square meter
-	Soft           string   // Software / device identifier
+	Software       string   // Software / device identifier
 	commentAfterWx string   // internal: non-weather comment text after weather data
 }
 

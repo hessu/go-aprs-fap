@@ -50,8 +50,8 @@ func TestULTW(t *testing.T) {
 		t.Errorf("rain_midnight = %s, want 4.1", got)
 	}
 
-	if wx.Soft != "" {
-		t.Errorf("soft = %q, want empty", wx.Soft)
+	if wx.Software != "" {
+		t.Errorf("soft = %q, want empty", wx.Software)
 	}
 }
 
@@ -98,8 +98,8 @@ func TestULTWBelowZero(t *testing.T) {
 		t.Errorf("rain_midnight = %s, want 0.0", got)
 	}
 
-	if wx.Soft != "" {
-		t.Errorf("soft = %q, want empty", wx.Soft)
+	if wx.Software != "" {
+		t.Errorf("soft = %q, want empty", wx.Software)
 	}
 }
 
@@ -149,7 +149,7 @@ func TestULTWLogging(t *testing.T) {
 		t.Errorf("rain_midnight = %s, want 73.2", got)
 	}
 
-	if wx.Soft != "" {
-		t.Errorf("soft = %q, want empty", wx.Soft)
+	if wx.Software != "" {
+		t.Errorf("soft = %q, want empty", wx.Software)
 	}
 }
