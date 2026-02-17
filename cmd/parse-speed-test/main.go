@@ -5,6 +5,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"io"
 	"os"
 	"runtime/pprof"
 	"sort"
@@ -15,26 +16,35 @@ import (
 )
 
 func main() {
-	cpuprofile := flag.String("cpuprofile", "", "write CPU profile to file")
-	filterError := flag.String("e", "", "print packets having the specified error code")
-	flag.StringVar(filterError, "error", "", "print packets having the specified error code")
-	flag.Parse()
+	os.Exit(run(os.Args[1:], os.Stdin, os.Stdout, os.Stderr))
+}
+
+func run(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
+	flags := flag.NewFlagSet("parse-speed-test", flag.ContinueOnError)
+	flags.SetOutput(stderr)
+	cpuprofile := flags.String("cpuprofile", "", "write CPU profile to file")
+	filterError := flags.String("e", "", "print packets having the specified error code")
+	flags.StringVar(filterError, "error", "", "print packets having the specified error code")
+
+	if err := flags.Parse(args); err != nil {
+		return 1
+	}
 
 	if *cpuprofile != "" {
 		f, err := os.Create(*cpuprofile)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "could not create CPU profile: %v\n", err)
-			os.Exit(1)
+			fmt.Fprintf(stderr, "could not create CPU profile: %v\n", err)
+			return 1
 		}
 		defer f.Close()
 		if err := pprof.StartCPUProfile(f); err != nil {
-			fmt.Fprintf(os.Stderr, "could not start CPU profile: %v\n", err)
-			os.Exit(1)
+			fmt.Fprintf(stderr, "could not start CPU profile: %v\n", err)
+			return 1
 		}
 		defer pprof.StopCPUProfile()
 	}
 
-	scanner := bufio.NewScanner(os.Stdin)
+	scanner := bufio.NewScanner(stdin)
 	scanner.Buffer(make([]byte, 1024*1024), 1024*1024)
 
 	var ok, unsupported, fail int
@@ -70,7 +80,7 @@ func main() {
 			if errors.As(err, &pe) {
 				errCounts[pe.Code]++
 				if *filterError != "" && pe.Code == *filterError {
-					fmt.Printf("%s [%s]\n", packet, err)
+					fmt.Fprintf(stdout, "%s [%s]\n", packet, err)
 				}
 			} else {
 				errCounts[err.Error()]++
@@ -81,8 +91,8 @@ func main() {
 	}
 
 	if err := scanner.Err(); err != nil {
-		fmt.Fprintf(os.Stderr, "read error: %v\n", err)
-		os.Exit(1)
+		fmt.Fprintf(stderr, "read error: %v\n", err)
+		return 1
 	}
 
 	elapsed := time.Since(start)
@@ -90,8 +100,8 @@ func main() {
 	secs := elapsed.Seconds()
 	rate := float64(total) / secs
 
-	fmt.Printf("Parsed %d packets in %.3f seconds (%.0f packets/sec)\n", total, secs, rate)
-	fmt.Printf("  OK: %d (%d unsupported), Failed: %d\n", ok+unsupported, unsupported, fail)
+	fmt.Fprintf(stdout, "Parsed %d packets in %.3f seconds (%.0f packets/sec)\n", total, secs, rate)
+	fmt.Fprintf(stdout, "  OK: %d (%d unsupported), Failed: %d\n", ok+unsupported, unsupported, fail)
 
 	if len(errCounts) > 0 {
 		type errEntry struct {
@@ -106,9 +116,11 @@ func main() {
 			return entries[i].count > entries[j].count
 		})
 
-		fmt.Printf("\nError summary (%d unique errors):\n", len(errCounts))
+		fmt.Fprintf(stdout, "\nError summary (%d unique errors):\n", len(errCounts))
 		for _, e := range entries {
-			fmt.Printf("  %6d  %s\n", e.count, e.msg)
+			fmt.Fprintf(stdout, "  %6d  %s\n", e.count, e.msg)
 		}
 	}
+
+	return 0
 }
