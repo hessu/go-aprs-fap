@@ -166,6 +166,8 @@ type Packet struct {
 	// Comment
 	Comment string // Packet comment text
 
+	// Warnings collected during parsing (non-fatal issues)
+	Warnings []ParseError
 }
 
 // options holds internal parsing configuration.
@@ -235,6 +237,11 @@ func Parse(raw string, opts ...Option) (*Packet, error) {
 // fail returns a *ParseError with the given sentinel's code and the specific message.
 func (p *Packet) fail(code *ParseError, msg string) error {
 	return &ParseError{Code: code.Code, Msg: msg}
+}
+
+// warn records a non-fatal parsing warning on the packet.
+func (p *Packet) warn(code *ParseError, msg string) {
+	p.Warnings = append(p.Warnings, ParseError{Code: code.Code, Msg: msg})
 }
 
 // parseHeader parses the packet header into source, destination, and digipeaters.

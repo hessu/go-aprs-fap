@@ -113,6 +113,33 @@ if errors.As(err, &parseErr) {
 }
 ```
 
+### Warnings
+
+Some issues are non-fatal: parsing succeeds but the packet has problems
+worth noting (e.g. an invalid timestamp). These are collected in the
+`Warnings` slice on the returned `Packet`:
+
+```go
+p, err := fap.Parse(raw)
+if err != nil {
+    // hard failure
+}
+for _, w := range p.Warnings {
+    fmt.Printf("warning: code=%s msg=%s\n", w.Code, w.Msg)
+}
+```
+
+Warnings use the same `ParseError` type as errors, so you can match
+specific codes with `errors.Is()`:
+
+```go
+for i := range p.Warnings {
+    if errors.Is(&p.Warnings[i], fap.ErrTimestampInvalid) {
+        // timestamp could not be parsed, but the rest of the packet is fine
+    }
+}
+```
+
 ## APRS-IS client
 
 The package includes an APRS-IS TCP client for connecting to APRS-IS

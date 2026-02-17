@@ -57,9 +57,10 @@ func (p *Packet) parsePositionWithTimestamp(opt *options, typeChar byte) error {
 	} else {
 		ts, err := parseTimestamp(body[:7])
 		if err != nil {
-			return p.fail(ErrTimestampInvalid, fmt.Sprintf("invalid timestamp: %v", err))
+			p.warn(ErrTimestampInvalid, fmt.Sprintf("invalid timestamp: %v", err))
+		} else {
+			p.Timestamp = ts
 		}
-		p.Timestamp = ts
 	}
 
 	posBody := body[7:]

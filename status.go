@@ -1,6 +1,7 @@
 package fap
 
 import (
+	"fmt"
 	"strings"
 )
 
@@ -17,10 +18,12 @@ func (p *Packet) parseStatus(opt *options) error {
 		if indicator == 'z' || indicator == '/' {
 			// Timestamp: DDHHMMz or DDHHMM/
 			ts, err := parseTimestamp(body[:7])
-			if err == nil {
+			if err != nil {
+				p.warn(ErrTimestampInvalid, fmt.Sprintf("invalid timestamp: %v", err))
+			} else {
 				p.Timestamp = ts
-				body = body[7:]
 			}
+			body = body[7:]
 		}
 	}
 

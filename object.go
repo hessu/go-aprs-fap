@@ -31,9 +31,10 @@ func (p *Packet) parseObject(opt *options) error {
 	// Timestamp (7 characters)
 	ts, err := parseTimestamp(body[10:17])
 	if err != nil {
-		return p.fail(ErrTimestampInvalid, fmt.Sprintf("invalid object timestamp: %v", err))
+		p.warn(ErrTimestampInvalid, fmt.Sprintf("invalid object timestamp: %v", err))
+	} else {
+		p.Timestamp = ts
 	}
-	p.Timestamp = ts
 
 	// Position data follows the timestamp
 	posBody := body[17:]

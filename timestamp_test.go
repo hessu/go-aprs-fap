@@ -1,6 +1,7 @@
 package fap
 
 import (
+	"errors"
 	"fmt"
 	"testing"
 	"time"
@@ -102,5 +103,73 @@ func TestTimestampDecodedDHMLocal(t *testing.T) {
 	}
 	if !p.Timestamp.Equal(outcome) {
 		t.Errorf("timestamp = %v, want %v", *p.Timestamp, outcome)
+	}
+}
+
+func TestTimestampInvalidLocation(t *testing.T) {
+	// Invalid timestamp (day 00) in a position packet should produce a warning, not an error.
+	packet := "KB3HVP-14>APU25N,N8TJG-10*,WIDE2-1,qAR,LANSNG:@000000z4231.16N/08449.88Wu227/052/A=000941 {UIV32N}"
+
+	p, err := Parse(packet)
+	if err != nil {
+		t.Fatalf("parsing failed: %v (should succeed with a warning)", err)
+	}
+	if p.Timestamp != nil {
+		t.Errorf("timestamp = %v, want nil for invalid timestamp", *p.Timestamp)
+	}
+	if len(p.Warnings) != 1 {
+		t.Fatalf("warnings count = %d, want 1", len(p.Warnings))
+	}
+	if !errors.Is(&p.Warnings[0], ErrTimestampInvalid) {
+		t.Errorf("warning code = %q, want %q", p.Warnings[0].Code, ErrTimestampInvalid.Code)
+	}
+	// Position should still be parsed
+	if p.Latitude == nil {
+		t.Error("latitude is nil, want parsed position")
+	}
+}
+
+func TestTimestampInvalidObject(t *testing.T) {
+	// Invalid timestamp (day 00) in an object packet should produce a warning, not an error.
+	packet := "SRC>APRS,TCPIP*:;TestObj  *000000z4903.50N/07201.75W-Test"
+
+	p, err := Parse(packet)
+	if err != nil {
+		t.Fatalf("parsing failed: %v (should succeed with a warning)", err)
+	}
+	if p.Timestamp != nil {
+		t.Errorf("timestamp = %v, want nil for invalid timestamp", *p.Timestamp)
+	}
+	if len(p.Warnings) != 1 {
+		t.Fatalf("warnings count = %d, want 1", len(p.Warnings))
+	}
+	if !errors.Is(&p.Warnings[0], ErrTimestampInvalid) {
+		t.Errorf("warning code = %q, want %q", p.Warnings[0].Code, ErrTimestampInvalid.Code)
+	}
+	// Position should still be parsed
+	if p.Latitude == nil {
+		t.Error("latitude is nil, want parsed position")
+	}
+}
+
+func TestTimestampInvalidStatus(t *testing.T) {
+	// Invalid timestamp (day 00) in a status packet should produce a warning, not an error.
+	packet := "SRC>APRS,TCPIP*:>000000zStatus text here"
+
+	p, err := Parse(packet)
+	if err != nil {
+		t.Fatalf("parsing failed: %v (should succeed with a warning)", err)
+	}
+	if p.Timestamp != nil {
+		t.Errorf("timestamp = %v, want nil for invalid timestamp", *p.Timestamp)
+	}
+	if len(p.Warnings) != 1 {
+		t.Fatalf("warnings count = %d, want 1", len(p.Warnings))
+	}
+	if !errors.Is(&p.Warnings[0], ErrTimestampInvalid) {
+		t.Errorf("warning code = %q, want %q", p.Warnings[0].Code, ErrTimestampInvalid.Code)
+	}
+	if p.Status != "Status text here" {
+		t.Errorf("status = %q, want %q", p.Status, "Status text here")
 	}
 }
