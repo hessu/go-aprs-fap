@@ -4,6 +4,7 @@
 
 # produced binaries
 parse-speed-test
+aprs-decode-single
 
 # logs
 *.log
