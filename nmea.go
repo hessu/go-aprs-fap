@@ -75,7 +75,7 @@ func (p *Packet) parseGPRMC(parts []string) error {
 
 	// Status check
 	if parts[2] != "A" {
-		return p.fail(ErrNMEAInvalid, "GPRMC: no valid fix")
+		return p.fail(ErrGPRMCNoFix, "GPRMC: no valid fix")
 	}
 
 	// Timestamp from time (HHMMSS) and date (DDMMYY) fields

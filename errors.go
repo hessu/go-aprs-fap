@@ -76,6 +76,7 @@ var (
 	// NMEA errors
 	ErrNMEAShort   = &ParseError{Code: "nmea_short"}
 	ErrNMEAInvalid = &ParseError{Code: "nmea_invalid"}
+	ErrGPRMCNoFix  = &ParseError{Code: "gprmc_nofix"}
 
 	// Timestamp errors
 	ErrTimestampInvalid = &ParseError{Code: "timestamp_inv"}

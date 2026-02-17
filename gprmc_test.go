@@ -3,6 +3,7 @@ package fap
 // Tests ported from perl-aprs-fap/t/24decode-gprmc.t
 
 import (
+	"errors"
 	"fmt"
 	"testing"
 	"time"
@@ -87,5 +88,17 @@ func TestGPRMC(t *testing.T) {
 
 	if p.Altitude != nil {
 		t.Errorf("altitude = %v, want nil", *p.Altitude)
+	}
+}
+
+func TestGPRMCNoFix(t *testing.T) {
+	packet := "SRC>APRS,WIDE1-1,GATE,qAR,GATE-1:$GPRMC,041518,V,,,,,,,230309,,*33"
+
+	_, err := Parse(packet)
+	if err == nil {
+		t.Fatal("expected error for GPRMC with no valid fix, got nil")
+	}
+	if !errors.Is(err, ErrGPRMCNoFix) {
+		t.Errorf("error = %v, want ErrGPRMCNoFix", err)
 	}
 }
