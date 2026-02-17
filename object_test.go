@@ -1,6 +1,7 @@
 package fap
 
 import (
+	"errors"
 	"fmt"
 	"testing"
 )
@@ -9,8 +10,8 @@ import (
 
 func TestObjectCompressed(t *testing.T) {
 	// Compressed format object (packet built with hex encoding in Perl test)
-	// OH2KKU-1>APRS,TCPIP*,qAC,FIRST:;SRAL HQ  *100927zS0%E/Th4_a  AKaupinmaenpolku9,open M-Th12-17,F12-14 lcl
-	packet := "OH2KKU-1>APRS,TCPIP*,qAC,FIRST:;SRAL HQ  *100927zS0%E/Th4_a  AKaupinmaenpolku9,open M-Th12-17,F12-14 lcl"
+	// N0CALL-1>APRS,TCPIP*,qAC,FIRST:;SRAL HQ  *100927zS0%E/Th4_a  AKaupinmaenpolku9,open M-Th12-17,F12-14 lcl
+	packet := "N0CALL-1>APRS,TCPIP*,qAC,FIRST:;SRAL HQ  *100927zS0%E/Th4_a  AKaupinmaenpolku9,open M-Th12-17,F12-14 lcl"
 
 	p, err := Parse(packet)
 	if err != nil {
@@ -65,7 +66,7 @@ func TestObjectCompressed(t *testing.T) {
 
 func TestObjectUncompressed(t *testing.T) {
 	// Regular APRS uncompressed position object
-	packet := "OH2KKU-1>APRS:;LEADER   *092345z4903.50N/07201.75W>088/036"
+	packet := "N0CALL-1>APRS:;LEADER   *092345z4903.50N/07201.75W>088/036"
 
 	p, err := Parse(packet)
 	if err != nil {
@@ -111,7 +112,7 @@ func TestObjectUncompressed(t *testing.T) {
 
 func TestObjectKilled(t *testing.T) {
 	// Killed object (underscore instead of asterisk)
-	packet := "OH2KKU-1>APRS:;LEADER   _092345z4903.50N/07201.75W>088/036"
+	packet := "N0CALL-1>APRS:;LEADER   _092345z4903.50N/07201.75W>088/036"
 
 	p, err := Parse(packet)
 	if err != nil {
@@ -126,5 +127,36 @@ func TestObjectKilled(t *testing.T) {
 	}
 	if p.Alive == nil || *p.Alive {
 		t.Error("expected alive = false")
+	}
+}
+
+func TestObjectErrors(t *testing.T) {
+	tests := []struct {
+		name    string
+		packet  string
+		wantErr error
+	}{
+		{
+			name:    "too short",
+			packet:  "N0CALL-1>APRS:;SHORT",
+			wantErr: ErrObjShort,
+		},
+		{
+			name:    "invalid alive/killed indicator",
+			packet:  "N0CALL-1>APRS:;LEADER   X092345z4903.50N/07201.75W>",
+			wantErr: ErrObjInvalid,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			_, err := Parse(tc.packet)
+			if err == nil {
+				t.Fatal("expected error, got nil")
+			}
+			if !errors.Is(err, tc.wantErr) {
+				t.Errorf("error = %v, want %v", err, tc.wantErr)
+			}
+		})
 	}
 }

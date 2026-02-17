@@ -13,7 +13,7 @@ import (
 
 func TestItemAlive(t *testing.T) {
 	// Alive item with uncompressed position
-	packet := "OH2KKU-1>APRS:)AID #2!4903.50N/07201.75WA"
+	packet := "N0CALL-1>APRS:)AID #2!4903.50N/07201.75WA"
 
 	p, err := Parse(packet)
 	if err != nil {
@@ -52,7 +52,7 @@ func TestItemAlive(t *testing.T) {
 
 func TestItemKilled(t *testing.T) {
 	// Killed item (underscore terminator)
-	packet := "OH2KKU-1>APRS:)AID #2_4903.50N/07201.75WA"
+	packet := "N0CALL-1>APRS:)AID #2_4903.50N/07201.75WA"
 
 	p, err := Parse(packet)
 	if err != nil {
@@ -71,7 +71,7 @@ func TestItemKilled(t *testing.T) {
 
 func TestItemShortName(t *testing.T) {
 	// Item with minimum 3-char name
-	packet := "OH2KKU-1>APRS:)X1Y!4903.50N/07201.75WA"
+	packet := "N0CALL-1>APRS:)X1Y!4903.50N/07201.75WA"
 
 	p, err := Parse(packet)
 	if err != nil {
@@ -109,7 +109,7 @@ func TestItemMaxLengthName(t *testing.T) {
 
 func TestItemTooShort(t *testing.T) {
 	// Packet too short for an item
-	packet := "OH2KKU-1>APRS:)short"
+	packet := "N0CALL-1>APRS:)short"
 
 	_, err := Parse(packet)
 	if err == nil {
@@ -120,9 +120,50 @@ func TestItemTooShort(t *testing.T) {
 	}
 }
 
+func TestItemCompressedPosition(t *testing.T) {
+	// Item with compressed format position
+	// Using the same compressed position as TestObjectCompressed: /0%E/Th4_/  A
+	// Symbol table '/', lat 0%E/ = 60.2305N, lon Th4_ = 24.8790E, symbol code '/'
+	packet := "N0CALL-1>APRS:)TEST!/0%E/Th4_/  A"
+
+	p, err := Parse(packet)
+	if err != nil {
+		t.Fatalf("failed to parse compressed item: %v", err)
+	}
+	if p.Type != PacketTypeItem {
+		t.Errorf("type = %q, want %q", p.Type, PacketTypeItem)
+	}
+	if p.ItemName != "TEST" {
+		t.Errorf("itemname = %q, want %q", p.ItemName, "TEST")
+	}
+	if p.Alive == nil || !*p.Alive {
+		t.Error("expected alive = true")
+	}
+
+	if p.Latitude == nil {
+		t.Fatal("latitude is nil")
+	}
+	if got := fmt.Sprintf("%.4f", *p.Latitude); got != "60.2305" {
+		t.Errorf("latitude = %s, want 60.2305", got)
+	}
+	if p.Longitude == nil {
+		t.Fatal("longitude is nil")
+	}
+	if got := fmt.Sprintf("%.4f", *p.Longitude); got != "24.8790" {
+		t.Errorf("longitude = %s, want 24.8790", got)
+	}
+
+	if p.SymbolTable != '/' {
+		t.Errorf("symboltable = %c, want /", p.SymbolTable)
+	}
+	if p.SymbolCode != '/' {
+		t.Errorf("symbolcode = %c, want /", p.SymbolCode)
+	}
+}
+
 func TestItemWithCourseSpeed(t *testing.T) {
 	// Item with course/speed extension
-	packet := "OH2KKU-1>APRS:)MOBILE!4903.50N/07201.75W>088/036"
+	packet := "N0CALL-1>APRS:)MOBILE!4903.50N/07201.75W>088/036"
 
 	p, err := Parse(packet)
 	if err != nil {
@@ -140,5 +181,36 @@ func TestItemWithCourseSpeed(t *testing.T) {
 	// 36 knots * 1.852 = 66.672 km/h
 	if got := fmt.Sprintf("%.3f", *p.Speed); got != "66.672" {
 		t.Errorf("speed = %s, want 66.672", got)
+	}
+}
+
+func TestItemErrors(t *testing.T) {
+	tests := []struct {
+		name    string
+		packet  string
+		wantErr error
+	}{
+		{
+			name:    "too short",
+			packet:  "N0CALL-1>APRS:)SH!1234",
+			wantErr: ErrItemShort,
+		},
+		{
+			name:    "no name terminator",
+			packet:  "N0CALL-1>APRS:)ABCDEFGHIJ4903.50N/07201.75W>",
+			wantErr: ErrItemInvalid,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			_, err := Parse(tc.packet)
+			if err == nil {
+				t.Fatal("expected error, got nil")
+			}
+			if !errors.Is(err, tc.wantErr) {
+				t.Errorf("error = %v, want %v", err, tc.wantErr)
+			}
+		})
 	}
 }
