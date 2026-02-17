@@ -127,6 +127,12 @@ func (p *Packet) parseUncompressedPosition(body string, opt *options) error {
 	return nil
 }
 
+// isCompressedTableChar checks if the first character after '!' could be a
+// compressed position symbol table identifier: /\A-Za-j
+func isCompressedTableChar(c byte) bool {
+	return c == '/' || c == '\\' || (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'j')
+}
+
 // isValidSymbolTable checks if a symbol table character is valid.
 func isValidSymbolTable(c byte) bool {
 	return c == '/' || c == '\\' || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9')
@@ -383,21 +389,28 @@ func (p *Packet) applyBase91DAO(d1, d2 byte) {
 // parsePositionFallback tries a last-resort position parse (looking for '!' in body).
 func (p *Packet) parsePositionFallback(opt *options) error {
 	idx := strings.IndexByte(p.Body, '!')
-	if idx < 0 {
+	if idx < 0 || idx > 39 {
 		return p.fail(ErrTypeNotSupported, "unsupported packet type")
 	}
 
-	p.Type = PacketTypeLocation
-	p.Messaging = new(false)
-
 	body := p.Body[idx+1:]
-	if len(body) == 0 {
-		return p.fail(ErrPosShort, "position body too short")
-	}
 
-	if body[0] >= '0' && body[0] <= '9' || body[0] == ' ' {
+	// Check minimum length requirements and dispatch to the right parser.
+	// Compressed positions need at least 13 characters, uncompressed need 19.
+	if len(body) > 0 && (body[0] >= '0' && body[0] <= '9' || body[0] == ' ') {
+		if len(body) < 19 {
+			return p.fail(ErrTypeNotSupported, "unsupported packet type")
+		}
+		p.Type = PacketTypeLocation
+		p.Messaging = new(false)
 		return p.parseUncompressedPosition(body, opt)
 	}
+
+	if len(body) < 13 || !isCompressedTableChar(body[0]) {
+		return p.fail(ErrTypeNotSupported, "unsupported packet type")
+	}
+	p.Type = PacketTypeLocation
+	p.Messaging = new(false)
 	return p.parseCompressedPosition(body, opt)
 }
 
