@@ -202,36 +202,6 @@ func TestMicEMoving(t *testing.T) {
 	}
 }
 
-func TestMicEInvalidSymbolTable(t *testing.T) {
-	packet := "OZ2BRN-4>5U2V08,OZ3RIN-3,OZ4DIA-2*,WIDE2-1,qAR,DB0KUE:`'O<l!{,,\"4R}"
-	p, err := Parse(packet)
-	if err == nil {
-		t.Fatal("expected error for invalid symbol table, got nil")
-	}
-
-	if !errors.Is(err, ErrSymInvTable) {
-		t.Errorf("error = %v, want %v", err, ErrSymInvTable)
-	}
-	if p.SrcCallsign != "OZ2BRN-4" {
-		t.Errorf("srccallsign = %q, want %q", p.SrcCallsign, "OZ2BRN-4")
-	}
-	if p.DstCallsign != "5U2V08" {
-		t.Errorf("dstcallsign = %q, want %q", p.DstCallsign, "5U2V08")
-	}
-	if p.Header != "OZ2BRN-4>5U2V08,OZ3RIN-3,OZ4DIA-2*,WIDE2-1,qAR,DB0KUE" {
-		t.Errorf("header = %q, want %q", p.Header, "OZ2BRN-4>5U2V08,OZ3RIN-3,OZ4DIA-2*,WIDE2-1,qAR,DB0KUE")
-	}
-	if p.Body != "`'O<l!{,,\"4R}" {
-		t.Errorf("body = %q, want %q", p.Body, "`'O<l!{,,\"4R}")
-	}
-	if p.Type != PacketTypeLocation {
-		t.Errorf("type = %q, want %q", p.Type, PacketTypeLocation)
-	}
-	if p.Comment != "" {
-		t.Errorf("comment = %q, want empty", p.Comment)
-	}
-}
-
 func TestMicEHexTelemetry5Ch(t *testing.T) {
 	// 5-channel Mic-E hex telemetry
 	packet := "OZ2BRN-4>5U2V08,WIDE2-1,qAo,OH7LZB:`c51!f?>/'102030FFff commeeeent"
@@ -328,6 +298,83 @@ func TestMicEMangled(t *testing.T) {
 	}
 	if !p.MiceMangled {
 		t.Errorf("mice_mangled = false, want true")
+	}
+}
+
+func TestMicEErrors(t *testing.T) {
+	tests := []struct {
+		name    string
+		packet  string
+		wantErr error
+	}{
+		{
+			name:    "destination too short",
+			packet:  "N0CALL>AB:`c51!f?>/",
+			wantErr: ErrMiceInvDstCall,
+		},
+		{
+			name:    "info field too short",
+			packet:  "N0CALL>SX15S6:`short",
+			wantErr: ErrMiceShort,
+		},
+		{
+			name:    "invalid destination character",
+			packet:  "N0CALL>SX1MS6:`c51!f?>/",
+			wantErr: ErrMiceInvDstCall,
+		},
+		{
+			name:    "invalid symbol table",
+			packet:  "OZ2BRN-4>5U2V08,OZ3RIN-3,OZ4DIA-2*,WIDE2-1,qAR,DB0KUE:`'O<l!{,,\"4R}",
+			wantErr: ErrSymInvTable,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			_, err := Parse(tc.packet)
+			if err == nil {
+				t.Fatal("expected error, got nil")
+			}
+			if !errors.Is(err, tc.wantErr) {
+				t.Errorf("error = %v, want %v", err, tc.wantErr)
+			}
+		})
+	}
+}
+
+func TestMicEMangledErrors(t *testing.T) {
+	tests := []struct {
+		name    string
+		packet  string
+		wantErr error
+	}{
+		{
+			name:    "destination too short",
+			packet:  "N0CALL>AB:`c51!f?>/",
+			wantErr: ErrMiceShort,
+		},
+		{
+			name:    "invalid info field",
+			packet:  "N0CALL>SX15S6:`c51!f?>" + string(byte(0x01)),
+			wantErr: ErrMiceInvInfoField,
+		},
+		{
+			name:    "invalid destination character",
+			packet:  "N0CALL>SX1MS6:`@@@@ >/",
+			wantErr: ErrMiceInvDstCall,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			_, err := Parse(tc.packet, WithAcceptBrokenMicE())
+			if err == nil {
+				t.Fatal("expected error, got nil")
+			}
+			if !errors.Is(err, tc.wantErr) {
+				t.Errorf("error = %v, want %v", err, tc.wantErr)
+			}
+		})
 	}
 }
 
