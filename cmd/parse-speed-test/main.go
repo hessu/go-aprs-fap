@@ -54,6 +54,11 @@ func main() {
 		}
 		packet := line[idx+1:]
 
+		// Skip comment lines
+		if strings.HasPrefix(packet, "#") {
+			continue
+		}
+
 		_, err := fap.Parse(packet)
 		if err != nil {
 			if errors.Is(err, fap.ErrTypeNotSupported) {
