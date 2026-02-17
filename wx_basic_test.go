@@ -398,8 +398,96 @@ func TestWxBatteryVoltage(t *testing.T) {
 	}
 }
 
+func TestIsSoftwareID(t *testing.T) {
+	tests := []struct {
+		input string
+		want  bool
+	}{
+		{"XRSW", true},
+		{"abc", true},
+		{"Ab-_9", true},
+		{"Z1234", true},
+		// too short
+		{"ab", false},
+		{"", false},
+		// too long
+		{"abcdef", false},
+		// invalid characters
+		{"ab c", false},
+		{"ab.c", false},
+		{"ab/c", false},
+		{"XR{W", false},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.input, func(t *testing.T) {
+			if got := isSoftwareID(tc.input); got != tc.want {
+				t.Errorf("isSoftwareID(%q) = %v, want %v", tc.input, got, tc.want)
+			}
+		})
+	}
+}
+
+func TestWxAllFieldsMissing(t *testing.T) {
+	// Every weather field is dots (missing), triggering skipWxField for all fields.
+	packet := "N0CALL>APRS,TCPIP*:_12032359c...s...g...t...r...p...P...h..b.....#...Os...L...F....X...V..."
+
+	p, err := Parse(packet)
+	if err != nil {
+		t.Fatalf("failed to parse: %v", err)
+	}
+
+	wx := p.Wx
+	if wx == nil {
+		t.Fatalf("wx is nil")
+	}
+
+	if wx.WindDirection != nil {
+		t.Errorf("wind_direction = %v, want nil", *wx.WindDirection)
+	}
+	if wx.WindSpeed != nil {
+		t.Errorf("wind_speed = %v, want nil", *wx.WindSpeed)
+	}
+	if wx.WindGust != nil {
+		t.Errorf("wind_gust = %v, want nil", *wx.WindGust)
+	}
+	if wx.Temp != nil {
+		t.Errorf("temp = %v, want nil", *wx.Temp)
+	}
+	if wx.Rain1h != nil {
+		t.Errorf("rain_1h = %v, want nil", *wx.Rain1h)
+	}
+	if wx.Rain24h != nil {
+		t.Errorf("rain_24h = %v, want nil", *wx.Rain24h)
+	}
+	if wx.RainMidnight != nil {
+		t.Errorf("rain_midnight = %v, want nil", *wx.RainMidnight)
+	}
+	if wx.Humidity != nil {
+		t.Errorf("humidity = %v, want nil", *wx.Humidity)
+	}
+	if wx.Pressure != nil {
+		t.Errorf("pressure = %v, want nil", *wx.Pressure)
+	}
+	if wx.Snow24h != nil {
+		t.Errorf("snow_24h = %v, want nil", *wx.Snow24h)
+	}
+	if wx.Luminosity != nil {
+		t.Errorf("luminosity = %v, want nil", *wx.Luminosity)
+	}
+	if wx.WaterLevel != nil {
+		t.Errorf("water_level = %v, want nil", *wx.WaterLevel)
+	}
+	if wx.Radiation != nil {
+		t.Errorf("radiation = %v, want nil", *wx.Radiation)
+	}
+	if wx.BatteryVoltage != nil {
+		t.Errorf("battery_voltage = %v, want nil", *wx.BatteryVoltage)
+	}
+}
+
 func TestWxPositionlessWithSnowfall(t *testing.T) {
-	packet := "JH9YVX>APU25N,TCPIP*,qAC,T2TOKYO3:_12032359c180s001g002t033r010p040P080b09860h98Os010L500"
+	packet := "JH9YVX>APU25N,TCPIP*,qAC,T2TOKYO3:_12032359c180s001g002t033r010p040P080#456b09860h98Os010L500"
 
 	p, err := Parse(packet)
 	if err != nil {

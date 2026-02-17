@@ -8,7 +8,7 @@ import (
 )
 
 func TestULTW(t *testing.T) {
-	packet := "WC4PEM-14>APN391,WIDE2-1,qAo,K2KZ-3:$ULTW0053002D028D02FA2813000D87BD000103E8015703430010000C"
+	packet := "N0CALL-14>APN391,WIDE2-1,qAo,IGATE-3:$ULTW0053002D028D02FA2813000D87BD000103E8015703430010000C"
 
 	p, err := Parse(packet)
 	if err != nil {
@@ -56,7 +56,7 @@ func TestULTW(t *testing.T) {
 }
 
 func TestULTWBelowZero(t *testing.T) {
-	packet := "SR3DGT>APN391,SQ2LYH-14,SR4DOS,WIDE2*,qAo,SR4NWO-1:$ULTW00000000FFEA0000296F000A9663000103E80016025D"
+	packet := "N0CALL>APN391,qAo,IGATE-1:$ULTW00000000FFEA0000296F000A9663000103E80016025D"
 
 	p, err := Parse(packet)
 	if err != nil {
@@ -104,7 +104,7 @@ func TestULTWBelowZero(t *testing.T) {
 }
 
 func TestULTWLogging(t *testing.T) {
-	packet := "MB7DS>APRS,TCPIP*,qAC,APRSUK2:!!00000066013D000028710166--------0158053201200210"
+	packet := "N0CALL>APRS,TCPIP*,qAC,APRSUK2:!!00000066013D000028710166--------0158053201200210"
 
 	p, err := Parse(packet)
 	if err != nil {
@@ -135,6 +135,9 @@ func TestULTWLogging(t *testing.T) {
 	if wx.Humidity != nil {
 		t.Errorf("humidity = %v, want nil", *wx.Humidity)
 	}
+	if wx.HumidityIn != nil {
+		t.Errorf("humidity_in = %v, want nil", *wx.HumidityIn)
+	}
 	if got := fmt.Sprintf("%.1f", *wx.Pressure); got != "1035.3" {
 		t.Errorf("pressure = %s, want 1035.3", got)
 	}
@@ -151,5 +154,28 @@ func TestULTWLogging(t *testing.T) {
 
 	if wx.Software != "" {
 		t.Errorf("soft = %q, want empty", wx.Software)
+	}
+}
+
+func TestULTWLoggingHumidity(t *testing.T) {
+	// Same as TestULTWLogging but with humidity (0x02BC = 700, 700/10 = 70)
+	// and humidity_in (0x031E = 798, 798/10 = 79) instead of '--------'
+	packet := "N0CALL>APRS,TCPIP*,qAC,APRSUK2:!!00000066013D00002871016602BC031E0158053201200210"
+
+	p, err := Parse(packet)
+	if err != nil {
+		t.Fatalf("failed to parse an ULTW logging wx packet with humidity: %v", err)
+	}
+
+	wx := p.Wx
+	if wx == nil {
+		t.Fatalf("wx is nil")
+	}
+
+	if wx.Humidity == nil || *wx.Humidity != 70 {
+		t.Errorf("humidity = %v, want 70", wx.Humidity)
+	}
+	if wx.HumidityIn == nil || *wx.HumidityIn != 79 {
+		t.Errorf("humidity_in = %v, want 79", wx.HumidityIn)
 	}
 }
