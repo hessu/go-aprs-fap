@@ -2,7 +2,6 @@ package fap
 
 import (
 	"fmt"
-	"math"
 	"strconv"
 	"strings"
 )
@@ -502,6 +501,3 @@ func (p *Packet) parseMicEMangled(opt *options) error {
 
 	return nil
 }
-
-// Ensure math import is used
-var _ = math.Abs
