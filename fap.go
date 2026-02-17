@@ -217,10 +217,6 @@ func Parse(raw string, opts ...Option) (*Packet, error) {
 	p.Header = raw[:colonIdx]
 	p.Body = raw[colonIdx+1:]
 
-	if len(p.Body) == 0 {
-		return p, p.fail(ErrPacketNoBody, "packet body is empty")
-	}
-
 	// Parse header: SRC>DST,DIGI1,DIGI2,...
 	if err := p.parseHeader(&opt); err != nil {
 		return p, err
