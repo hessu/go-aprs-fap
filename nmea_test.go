@@ -510,10 +510,10 @@ func TestParseGPRMCTimestampErrors(t *testing.T) {
 	}
 
 	tests := []struct {
-		name    string
-		time    string
-		date    string
-		errIs   string // substring in error message
+		name  string
+		time  string
+		date  string
+		errIs string // substring in error message
 	}{
 		// Time errors
 		{"time too short", "1234", "121207", "invalid time"},
