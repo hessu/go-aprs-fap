@@ -50,7 +50,7 @@ func EncodePosition(lat, lon float64, speed, course, altitude *float64, symbol s
 
 	// Validate coordinates
 	if lat < -89.99999 || lat > 89.99999 || lon < -179.99999 || lon > 179.99999 {
-		return "", fmt.Errorf("invalid coordinates: lat=%f lon=%f", lat, lon)
+		return "", &ParseError{Code: ErrPosEncInvalid.Code, Msg: fmt.Sprintf("invalid coordinates: lat=%f lon=%f", lat, lon)}
 	}
 
 	// Parse symbol
@@ -62,13 +62,13 @@ func EncodePosition(lat, lon float64, speed, course, altitude *float64, symbol s
 		symbolTable = symbol[0]
 		symbolCode = symbol[1]
 		if !isValidSymbolTable(symbolTable) {
-			return "", fmt.Errorf("invalid symbol table: %c", symbolTable)
+			return "", &ParseError{Code: ErrPosEncInvalid.Code, Msg: fmt.Sprintf("invalid symbol table: %c", symbolTable)}
 		}
 		if symbolCode < 0x21 || symbolCode > 0x7b && symbolCode != 0x7d {
-			return "", fmt.Errorf("invalid symbol code: %c", symbolCode)
+			return "", &ParseError{Code: ErrPosEncInvalid.Code, Msg: fmt.Sprintf("invalid symbol code: %c", symbolCode)}
 		}
 	} else {
-		return "", fmt.Errorf("invalid symbol length: %d", len(symbol))
+		return "", &ParseError{Code: ErrPosEncInvalid.Code, Msg: fmt.Sprintf("invalid symbol length: %d", len(symbol))}
 	}
 
 	// Convert latitude to degrees and minutes

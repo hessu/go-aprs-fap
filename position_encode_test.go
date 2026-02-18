@@ -1,6 +1,7 @@
 package fap
 
 import (
+	"errors"
 	"testing"
 	"time"
 )
@@ -113,6 +114,36 @@ func TestEncodePosition(t *testing.T) {
 			}
 			if got != tc.want {
 				t.Errorf("got %q, want %q", got, tc.want)
+			}
+		})
+	}
+}
+
+func TestEncodePositionErrors(t *testing.T) {
+	tests := []struct {
+		name   string
+		lat    float64
+		lon    float64
+		symbol string
+	}{
+		{"lat too high", 91.0, 0.0, "/#"},
+		{"lat too low", -91.0, 0.0, "/#"},
+		{"lon too high", 0.0, 181.0, "/#"},
+		{"lon too low", 0.0, -181.0, "/#"},
+		{"invalid symbol table", 0.0, 0.0, "a#"},
+		{"invalid symbol code", 0.0, 0.0, "/\x1f"},
+		{"symbol too short", 0.0, 0.0, "/"},
+		{"symbol too long", 0.0, 0.0, "//#"},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			_, err := EncodePosition(tc.lat, tc.lon, nil, nil, nil, tc.symbol, nil)
+			if err == nil {
+				t.Fatalf("expected error, got nil")
+			}
+			if !errors.Is(err, ErrPosEncInvalid) {
+				t.Errorf("expected ErrPosEncInvalid, got %v", err)
 			}
 		})
 	}

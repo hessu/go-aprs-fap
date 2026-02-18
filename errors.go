@@ -79,6 +79,9 @@ var (
 	ErrMsgAckRej     = &ParseError{Code: "msg_ack_rej"}
 	ErrMsgCRLF       = &ParseError{Code: "msg_cr"}
 
+	// Position encoding errors
+	ErrPosEncInvalid = &ParseError{Code: "pos_enc_inv"}
+
 	// NMEA errors
 	ErrNMEAShort   = &ParseError{Code: "nmea_short"}
 	ErrNMEAInvalid = &ParseError{Code: "nmea_invalid"}
