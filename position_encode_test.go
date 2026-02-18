@@ -91,6 +91,18 @@ func TestEncodePosition(t *testing.T) {
 			&EncodePositionOpts{Timestamp: time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC)},
 			"/000000h5221.84N/01406.27E>353/045/A=000314",
 		},
+		{
+			"messaging capable, no timestamp",
+			63.06716666666667, 27.6605, nil, nil, nil, "/#",
+			&EncodePositionOpts{MessagingCapable: true},
+			"=6304.03N/02739.63E#",
+		},
+		{
+			"messaging capable, with timestamp",
+			63.06716666666667, 27.6605, nil, nil, nil, "/#",
+			&EncodePositionOpts{MessagingCapable: true, Timestamp: time.Date(2024, 3, 15, 12, 30, 45, 0, time.UTC)},
+			"@123045h6304.03N/02739.63E#",
+		},
 	}
 
 	for _, tc := range tests {

@@ -8,10 +8,11 @@ import (
 
 // EncodePositionOpts contains optional parameters for EncodePosition.
 type EncodePositionOpts struct {
-	Ambiguity int        // 0-4
-	Timestamp time.Time // if non-zero, include HHMMSSh UTC timestamp
-	DAO       bool       // enable !DAO! extension for extra precision
-	Comment   string     // comment to append
+	Ambiguity        int       // 0-4
+	Timestamp        time.Time // if non-zero, include HHMMSSh UTC timestamp
+	MessagingCapable bool      // report that the station can receive text messages
+	DAO              bool      // enable !DAO! extension for extra precision
+	Comment          string    // comment to append
 }
 
 // EncodePosition creates an uncompressed APRS position string.
@@ -152,13 +153,25 @@ func EncodePosition(lat, lon float64, speed, course, altitude *float64, symbol s
 		lonString += "W"
 	}
 
-	// Build result
+	// Build result - data type identifier depends on timestamp and messaging capability:
+	//   ! = no timestamp, no messaging
+	//   = = no timestamp, messaging capable
+	//   / = timestamp, no messaging
+	//   @ = timestamp, messaging capable
 	var result string
 	if !opts.Timestamp.IsZero() {
 		utc := opts.Timestamp.UTC()
-		result = fmt.Sprintf("/%02d%02d%02dh", utc.Hour(), utc.Minute(), utc.Second())
+		dtid := byte('/')
+		if opts.MessagingCapable {
+			dtid = '@'
+		}
+		result = fmt.Sprintf("%c%02d%02d%02dh", dtid, utc.Hour(), utc.Minute(), utc.Second())
 	} else {
-		result = "!"
+		if opts.MessagingCapable {
+			result = "="
+		} else {
+			result = "!"
+		}
 	}
 	result += latString + string(symbolTable) + lonString + string(symbolCode)
 
