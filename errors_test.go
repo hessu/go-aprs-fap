@@ -16,10 +16,10 @@ func TestParseErrorError(t *testing.T) {
 
 func TestParseErrorIs(t *testing.T) {
 	tests := []struct {
-		name string
-		err  *ParseError
+		name   string
+		err    *ParseError
 		target error
-		want bool
+		want   bool
 	}{
 		{
 			name:   "same code different msg",
