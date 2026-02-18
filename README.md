@@ -219,6 +219,16 @@ body, err := fap.EncodePosition(lat, lon, nil, nil, nil, "/-", &fap.EncodePositi
 })
 ```
 
+Include an HMS UTC timestamp with the `Timestamp` option. This changes the
+data type identifier from `!` to `/` and prepends an `HHMMSSh` timestamp:
+
+```go
+body, err := fap.EncodePosition(lat, lon, nil, nil, nil, "/-", &fap.EncodePositionOpts{
+    Timestamp: time.Date(2024, 3, 15, 12, 30, 45, 0, time.UTC),
+})
+// body is "/123045h6027.15N/02459.05E-"
+```
+
 Enable DAO for extra precision using the `!DAO!` extension:
 
 ```go

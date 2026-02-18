@@ -3,13 +3,15 @@ package fap
 import (
 	"fmt"
 	"strconv"
+	"time"
 )
 
 // EncodePositionOpts contains optional parameters for EncodePosition.
 type EncodePositionOpts struct {
-	Ambiguity int    // 0-4
-	DAO       bool   // enable !DAO! extension for extra precision
-	Comment   string // comment to append
+	Ambiguity int        // 0-4
+	Timestamp time.Time // if non-zero, include HHMMSSh UTC timestamp
+	DAO       bool       // enable !DAO! extension for extra precision
+	Comment   string     // comment to append
 }
 
 // EncodePosition creates an uncompressed APRS position string.
@@ -151,7 +153,14 @@ func EncodePosition(lat, lon float64, speed, course, altitude *float64, symbol s
 	}
 
 	// Build result
-	result := "!" + latString + string(symbolTable) + lonString + string(symbolCode)
+	var result string
+	if !opts.Timestamp.IsZero() {
+		utc := opts.Timestamp.UTC()
+		result = fmt.Sprintf("/%02d%02d%02dh", utc.Hour(), utc.Minute(), utc.Second())
+	} else {
+		result = "!"
+	}
+	result += latString + string(symbolTable) + lonString + string(symbolCode)
 
 	// Add course/speed if both provided
 	if speed != nil && course != nil && *speed >= 0 && *course >= 0 {

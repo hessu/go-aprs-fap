@@ -2,6 +2,7 @@ package fap
 
 import (
 	"testing"
+	"time"
 )
 
 // Tests ported from perl-aprs-fap/t/80make-position.t
@@ -77,6 +78,18 @@ func TestEncodePosition(t *testing.T) {
 			48.37314835164835, 15.71477838827839, new(62.968), new(321.0), new(192.9384), "/>",
 			&EncodePositionOpts{DAO: true, Comment: "Comment blah"},
 			"!4822.38N/01542.88E>321/034/A=000633Comment blah!wr^!",
+		},
+		{
+			"with timestamp",
+			63.06716666666667, 27.6605, nil, nil, nil, "/#",
+			&EncodePositionOpts{Timestamp: time.Date(2024, 3, 15, 12, 30, 45, 0, time.UTC)},
+			"/123045h6304.03N/02739.63E#",
+		},
+		{
+			"with timestamp and speed/course/alt",
+			52.364, 14.1045, new(83.34), new(353.0), new(95.7072), "/>",
+			&EncodePositionOpts{Timestamp: time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC)},
+			"/000000h5221.84N/01406.27E>353/045/A=000314",
 		},
 	}
 
