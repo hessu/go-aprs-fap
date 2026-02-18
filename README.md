@@ -193,6 +193,40 @@ func main() {
 - `Conn.Close()` — close the connection
 - `fap.AprsPasscode(callsign)` — compute the APRS-IS passcode for a callsign
 
+## Position encoding
+
+`EncodePosition` creates an uncompressed APRS position body string.
+Coordinates are in decimal degrees, speed in km/h, course in degrees,
+altitude in meters. Symbol is a 2-character string (table + code).
+
+```go
+lat := 60.4525
+lon := 24.9842
+speed := 45.0
+course := 180.0
+alt := 120.0
+
+body, err := fap.EncodePosition(lat, lon, &speed, &course, &alt, "/>", nil)
+// body is "!6027.15N/02459.05E/>180/024/A=000394"
+```
+
+Optional parameters are passed via `EncodePositionOpts`:
+
+```go
+body, err := fap.EncodePosition(lat, lon, nil, nil, nil, "/-", &fap.EncodePositionOpts{
+    Ambiguity: 2,     // 0-4, reduces coordinate precision
+    Comment:   "Test",
+})
+```
+
+Enable DAO for extra precision using the `!DAO!` extension:
+
+```go
+body, err := fap.EncodePosition(lat, lon, nil, nil, nil, "/-", &fap.EncodePositionOpts{
+    DAO: true,
+})
+```
+
 ## Message encoding
 
 `EncodeMessage` encodes a `Message` struct into an APRS message body string

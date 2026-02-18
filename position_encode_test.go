@@ -6,7 +6,7 @@ import (
 
 // Tests ported from perl-aprs-fap/t/80make-position.t
 
-func TestMakePosition(t *testing.T) {
+func TestEncodePosition(t *testing.T) {
 	tests := []struct {
 		name     string
 		lat, lon float64
@@ -14,7 +14,7 @@ func TestMakePosition(t *testing.T) {
 		course   *float64
 		altitude *float64
 		symbol   string
-		opts     *MakePositionOpts
+		opts     *EncodePositionOpts
 		want     string
 	}{
 		{
@@ -44,47 +44,47 @@ func TestMakePosition(t *testing.T) {
 		},
 		{
 			"NE, ambiguity 1",
-			52.364, 14.1045, nil, nil, nil, "/>", &MakePositionOpts{Ambiguity: 1},
+			52.364, 14.1045, nil, nil, nil, "/>", &EncodePositionOpts{Ambiguity: 1},
 			"!5221.8 N/01406.2 E>",
 		},
 		{
 			"NE, ambiguity 2",
-			52.364, 14.1045, nil, nil, nil, "/>", &MakePositionOpts{Ambiguity: 2},
+			52.364, 14.1045, nil, nil, nil, "/>", &EncodePositionOpts{Ambiguity: 2},
 			"!5221.  N/01406.  E>",
 		},
 		{
 			"NE, ambiguity 3",
-			52.364, 14.1045, nil, nil, nil, "/>", &MakePositionOpts{Ambiguity: 3},
+			52.364, 14.1045, nil, nil, nil, "/>", &EncodePositionOpts{Ambiguity: 3},
 			"!522 .  N/0140 .  E>",
 		},
 		{
 			"NE, ambiguity 4",
-			52.364, 14.1045, nil, nil, nil, "/>", &MakePositionOpts{Ambiguity: 4},
+			52.364, 14.1045, nil, nil, nil, "/>", &EncodePositionOpts{Ambiguity: 4},
 			"!52  .  N/014  .  E>",
 		},
 		{
 			"DAO position, US",
-			39.15380036630037, -84.62208058608059, nil, nil, nil, "/>", &MakePositionOpts{DAO: true},
+			39.15380036630037, -84.62208058608059, nil, nil, nil, "/>", &EncodePositionOpts{DAO: true},
 			"!3909.22N/08437.32W>!wjM!",
 		},
 		{
 			"DAO rounding",
-			39.9999999, -84.9999999, nil, nil, nil, "/>", &MakePositionOpts{DAO: true},
+			39.9999999, -84.9999999, nil, nil, nil, "/>", &EncodePositionOpts{DAO: true},
 			"!3959.99N/08459.99W>!w{{!",
 		},
 		{
 			"DAO with speed/course/alt/comment",
 			48.37314835164835, 15.71477838827839, new(62.968), new(321.0), new(192.9384), "/>",
-			&MakePositionOpts{DAO: true, Comment: "Comment blah"},
+			&EncodePositionOpts{DAO: true, Comment: "Comment blah"},
 			"!4822.38N/01542.88E>321/034/A=000633Comment blah!wr^!",
 		},
 	}
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			got, err := MakePosition(tc.lat, tc.lon, tc.speed, tc.course, tc.altitude, tc.symbol, tc.opts)
+			got, err := EncodePosition(tc.lat, tc.lon, tc.speed, tc.course, tc.altitude, tc.symbol, tc.opts)
 			if err != nil {
-				t.Fatalf("MakePosition failed: %v", err)
+				t.Fatalf("EncodePosition failed: %v", err)
 			}
 			if got != tc.want {
 				t.Errorf("got %q, want %q", got, tc.want)

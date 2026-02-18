@@ -5,19 +5,19 @@ import (
 	"strconv"
 )
 
-// MakePositionOpts contains optional parameters for MakePosition.
-type MakePositionOpts struct {
+// EncodePositionOpts contains optional parameters for EncodePosition.
+type EncodePositionOpts struct {
 	Ambiguity int    // 0-4
 	DAO       bool   // enable !DAO! extension for extra precision
 	Comment   string // comment to append
 }
 
-// MakePosition creates an uncompressed APRS position string.
+// EncodePosition creates an uncompressed APRS position string.
 // lat/lon are in decimal degrees, speed in km/h, course in degrees, altitude in meters.
 // symbol is a 2-character string (table + code).
-func MakePosition(lat, lon float64, speed, course, altitude *float64, symbol string, opts *MakePositionOpts) (string, error) {
+func EncodePosition(lat, lon float64, speed, course, altitude *float64, symbol string, opts *EncodePositionOpts) (string, error) {
 	if opts == nil {
-		opts = &MakePositionOpts{}
+		opts = &EncodePositionOpts{}
 	}
 
 	// If ambiguity is set, DAO is not applicable
