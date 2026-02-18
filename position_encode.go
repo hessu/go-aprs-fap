@@ -55,10 +55,7 @@ func EncodePosition(lat, lon float64, speed, course, altitude *float64, symbol s
 
 	// Parse symbol
 	var symbolTable, symbolCode byte
-	if len(symbol) == 0 {
-		symbolTable = '/'
-		symbolCode = '/'
-	} else if len(symbol) == 2 {
+	if len(symbol) == 2 {
 		symbolTable = symbol[0]
 		symbolCode = symbol[1]
 		if !isValidSymbolTable(symbolTable) {
