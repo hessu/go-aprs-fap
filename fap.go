@@ -33,7 +33,6 @@ const (
 	PacketTypeTelemetry    PacketType = "telemetry"
 	PacketTypeStatus       PacketType = "status"
 	PacketTypeCapabilities PacketType = "capabilities"
-	PacketTypeDX           PacketType = "dx"
 )
 
 // Format represents the position encoding format used in a packet.
