@@ -70,8 +70,14 @@ var (
 	ErrItemInvalid = &ParseError{Code: "item_invalid"}
 
 	// Message errors
-	ErrMsgShort   = &ParseError{Code: "msg_short"}
-	ErrMsgInvalid = &ParseError{Code: "msg_invalid"}
+	ErrMsgShort      = &ParseError{Code: "msg_short"}
+	ErrMsgInvalid    = &ParseError{Code: "msg_invalid"}
+	ErrMsgNoDst      = &ParseError{Code: "msg_no_dst"}
+	ErrMsgDstTooLong = &ParseError{Code: "msg_dst_long"}
+	ErrMsgIDInvalid  = &ParseError{Code: "msg_id_inv"}
+	ErrMsgReplyAck   = &ParseError{Code: "msg_replyack"}
+	ErrMsgAckRej     = &ParseError{Code: "msg_ack_rej"}
+	ErrMsgCRLF       = &ParseError{Code: "msg_cr"}
 
 	// NMEA errors
 	ErrNMEAShort   = &ParseError{Code: "nmea_short"}

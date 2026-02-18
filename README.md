@@ -193,6 +193,55 @@ func main() {
 - `Conn.Close()` — close the connection
 - `fap.AprsPasscode(callsign)` — compute the APRS-IS passcode for a callsign
 
+## Message encoding
+
+`EncodeMessage` encodes a `Message` struct into an APRS message body string
+that can be parsed back by the packet parser.
+
+```go
+msg := &fap.Message{
+    Destination: "N0CALL",
+    Text:        "Hello world",
+    ID:          "42",
+}
+
+body, err := fap.EncodeMessage(msg)
+if err != nil {
+    fmt.Printf("Error: %v\n", err)
+    return
+}
+// body is ":N0CALL   :Hello world{42"
+```
+
+It supports all message variants: regular messages, acks, rejects, and
+reply-acks. Validation is performed on all fields:
+
+| Sentinel | Condition |
+|---|---|
+| `ErrMsgNoDst` | Destination is empty |
+| `ErrMsgDstTooLong` | Destination exceeds 9 characters |
+| `ErrMsgIDInvalid` | Message ID is not 1-5 alphanumeric characters |
+| `ErrMsgReplyAck` | Reply-ack ID + '}' + ack ID exceeds 5 characters |
+| `ErrMsgAckRej` | Both ack and reject set, or content with reject |
+| `ErrMsgCRLF` | Any field contains CR or LF |
+
+```go
+// Send an ack
+ack := &fap.Message{Destination: "N0CALL", AckID: "42"}
+body, _ := fap.EncodeMessage(ack)
+
+// Send a reject
+rej := &fap.Message{Destination: "N0CALL", RejID: "42"}
+body, _ = fap.EncodeMessage(rej)
+
+// Reply-ack (embedded ack in message)
+msg := &fap.Message{Destination: "N0CALL", Text: "Hi", ID: "1", AckID: "ab"}
+body, err := fap.EncodeMessage(msg)
+if errors.Is(err, fap.ErrMsgReplyAck) {
+    // ack doesn't fit, send it separately
+}
+```
+
 ## See also
 
 - [Ham::APRS::FAP](https://metacpan.org/pod/Ham::APRS::FAP) - the original Perl module
