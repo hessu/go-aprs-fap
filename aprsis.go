@@ -71,7 +71,10 @@ func Dial(addr, callsign, passcode, appName, appVer string, filter ...string) (*
 // ReadLine reads a single line from the connection, stripping the
 // trailing CR/LF. The provided timeout sets a read deadline.
 func (c *Conn) ReadLine(timeout time.Duration) (string, error) {
-	c.conn.SetReadDeadline(time.Now().Add(timeout))
+	err := c.conn.SetReadDeadline(time.Now().Add(timeout))
+	if err != nil {
+		return "", err
+	}
 	line, err := c.reader.ReadString('\n')
 	if err != nil {
 		return "", err
