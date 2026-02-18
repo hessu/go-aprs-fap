@@ -15,6 +15,26 @@ type EncodePositionOpts struct {
 	Comment          string    // comment to append
 }
 
+// formatMinutes converts fractional minutes to a string for APRS position encoding.
+// With dao=true, returns 4-digit minutes string and 2-digit DAO extension.
+// With dao=false, returns 4-digit minutes string and empty DAO.
+// Handles rounding to 60 minutes by clamping to 5999.
+func formatMinutes(min float64, dao bool) (minS, daoS string) {
+	if dao {
+		minS = fmt.Sprintf("%06.0f", min*10000)
+		if len(minS) > 4 {
+			daoS = minS[4:6]
+		}
+	} else {
+		minS = fmt.Sprintf("%04.0f", min*100)
+	}
+	if len(minS) >= 2 && minS[0] == '6' && minS[1] == '0' {
+		minS = "5999"
+		daoS = "99"
+	}
+	return minS, daoS
+}
+
 // EncodePosition creates an uncompressed APRS position string.
 // lat/lon are in decimal degrees, speed in km/h, course in degrees, altitude in meters.
 // symbol is a 2-character string (table + code).
@@ -60,22 +80,7 @@ func EncodePosition(lat, lon float64, speed, course, altitude *float64, symbol s
 	latDeg := int(lat)
 	latMin := (lat - float64(latDeg)) * 60
 
-	var latMinS string
-	var latMinDAO string
-	if opts.DAO {
-		latMinS = fmt.Sprintf("%06.0f", latMin*10000)
-		if len(latMinS) > 4 {
-			latMinDAO = latMinS[4:6]
-		}
-	} else {
-		latMinS = fmt.Sprintf("%04.0f", latMin*100)
-	}
-
-	// Check for rounding to 60 minutes
-	if len(latMinS) >= 2 && latMinS[0] == '6' && latMinS[1] == '0' {
-		latMinS = "5999"
-		latMinDAO = "99"
-	}
+	latMinS, latMinDAO := formatMinutes(latMin, opts.DAO)
 
 	latString := fmt.Sprintf("%02d%s.%s", latDeg, latMinS[0:2], latMinS[2:4])
 
@@ -111,22 +116,7 @@ func EncodePosition(lat, lon float64, speed, course, altitude *float64, symbol s
 	lonDeg := int(lon)
 	lonMin := (lon - float64(lonDeg)) * 60
 
-	var lonMinS string
-	var lonMinDAO string
-	if opts.DAO {
-		lonMinS = fmt.Sprintf("%06.0f", lonMin*10000)
-		if len(lonMinS) > 4 {
-			lonMinDAO = lonMinS[4:6]
-		}
-	} else {
-		lonMinS = fmt.Sprintf("%04.0f", lonMin*100)
-	}
-
-	// Check for rounding to 60 minutes
-	if len(lonMinS) >= 2 && lonMinS[0] == '6' && lonMinS[1] == '0' {
-		lonMinS = "5999"
-		lonMinDAO = "99"
-	}
+	lonMinS, lonMinDAO := formatMinutes(lonMin, opts.DAO)
 
 	lonString := fmt.Sprintf("%03d%s.%s", lonDeg, lonMinS[0:2], lonMinS[2:4])
 
