@@ -95,4 +95,7 @@ var (
 
 	// Telemetry errors
 	ErrTlmInvalid = &ParseError{Code: "tlm_inv"}
+
+	// Non-APRS beacon (packet failed to parse but destination indicates a generic beacon)
+	ErrNonAprsBeacon = &ParseError{Code: "non_aprs_beacon"}
 )

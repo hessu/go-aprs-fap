@@ -17,6 +17,7 @@
 package fap
 
 import (
+	"errors"
 	"strings"
 	"time"
 )
@@ -224,6 +225,9 @@ func Parse(raw string, opts ...Option) (*Packet, error) {
 
 	// Determine packet type from the first character(s) of the body
 	if err := p.parseBody(&opt); err != nil {
+		if errors.Is(err, ErrTypeNotSupported) && p.IsBeacon() {
+			return p, p.fail(ErrNonAprsBeacon, "non-APRS beacon packet")
+		}
 		return p, err
 	}
 
@@ -396,6 +400,21 @@ func (p *Packet) parseBody(opt *options) error {
 		// Try last-resort position parsing (look for ! in body)
 		return p.parsePositionFallback(opt)
 	}
+}
+
+// beaconDestinations lists destination callsigns that identify
+// generic non-APRS beacon packets.
+var beaconDestinations = map[string]bool{
+	"ID":     true,
+	"BEACON": true,
+	"UIDIGI": true,
+	"CQ":     true,
+}
+
+// IsBeacon reports whether the packet looks like a generic non-APRS beacon
+// based on its destination callsign (ID, BEACON, UIDIGI, CQ).
+func (p *Packet) IsBeacon() bool {
+	return beaconDestinations[p.DstCallsign]
 }
 
 // CheckAX25Call validates and normalizes an AX.25 callsign.

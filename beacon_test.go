@@ -16,8 +16,8 @@ func TestBeaconNonAPRS(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error for non-APRS beacon packet")
 	}
-	if !errors.Is(err, ErrTypeNotSupported) {
-		t.Errorf("error = %v, want %v", err, ErrTypeNotSupported)
+	if !errors.Is(err, ErrNonAprsBeacon) {
+		t.Errorf("error = %v, want %v", err, ErrNonAprsBeacon)
 	}
 	if p.SrcCallsign != "OH2RDU" {
 		t.Errorf("srccallsign = %q, want %q", p.SrcCallsign, "OH2RDU")
