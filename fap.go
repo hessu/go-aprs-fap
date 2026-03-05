@@ -17,7 +17,6 @@
 package fap
 
 import (
-	"errors"
 	"strings"
 	"time"
 )
@@ -35,6 +34,7 @@ const (
 	PacketTypeTelemetryMessage PacketType = "telemetry-message"
 	PacketTypeStatus           PacketType = "status"
 	PacketTypeCapabilities     PacketType = "capabilities"
+	PacketTypeBeacon           PacketType = "beacon"
 )
 
 // Format represents the position encoding format used in a packet.
@@ -225,9 +225,6 @@ func Parse(raw string, opts ...Option) (*Packet, error) {
 
 	// Determine packet type from the first character(s) of the body
 	if err := p.parseBody(&opt); err != nil {
-		if errors.Is(err, ErrTypeNotSupported) && p.IsBeacon() {
-			return p, p.fail(ErrNonAprsBeacon, "non-APRS beacon packet")
-		}
 		return p, err
 	}
 
@@ -389,17 +386,28 @@ func (p *Packet) parseBody(opt *options) error {
 		if len(p.Body) > 1 && p.Body[1] == '#' {
 			return p.parseTelemetry(opt)
 		}
-		return p.parsePositionFallback(opt)
+		return p.parsePositionOrBeacon(opt)
 	case '{':
 		// Experimental
 		if len(p.Body) > 1 && p.Body[1] == '{' {
 			return p.fail(ErrExpUnsupported, "unsupported experimental packet")
 		}
-		return p.parsePositionFallback(opt)
+		return p.parsePositionOrBeacon(opt)
 	default:
 		// Try last-resort position parsing (look for ! in body)
-		return p.parsePositionFallback(opt)
+		return p.parsePositionOrBeacon(opt)
 	}
+}
+
+// parsePositionOrBeacon tries last-resort position parsing, and if
+// that fails, checks if this is a generic non-APRS beacon packet.
+func (p *Packet) parsePositionOrBeacon(opt *options) error {
+	err := p.parsePositionFallback(opt)
+	if err != nil && p.IsBeacon() {
+		p.Type = PacketTypeBeacon
+		return nil
+	}
+	return err
 }
 
 // beaconDestinations lists destination callsigns that identify
