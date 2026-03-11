@@ -261,6 +261,24 @@ func TestPHGInvalidNotParsed(t *testing.T) {
 	}
 }
 
+func TestRNG(t *testing.T) {
+	packet := "OH2RDP-1>BEACON-15:!6028.51N/02505.68E#RNG0050some comment"
+
+	p, err := Parse(packet)
+	if err != nil {
+		t.Fatalf("failed to parse: %v", err)
+	}
+	if p.RadioRange == nil {
+		t.Fatal("radiorange is nil")
+	}
+	if got := fmt.Sprintf("%.4f", *p.RadioRange); got != "80.4672" {
+		t.Errorf("radiorange = %s, want 80.4672", got)
+	}
+	if p.Comment != "some comment" {
+		t.Errorf("comment = %q, want %q", p.Comment, "some comment")
+	}
+}
+
 func TestUncompressedTimestampAltitude(t *testing.T) {
 	// Position with timestamp and altitude
 	packet := "YB1RUS-9>APOTC1,WIDE2-2,qAS,YC0GIN-1:/180000z0609.31S/10642.85E>058/010/A=000079 13.8V 15CYB1RUS-9 Mobile Tracker"

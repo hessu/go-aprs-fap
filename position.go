@@ -300,6 +300,15 @@ func (p *Packet) parsePositionComment(comment string) {
 		}
 	}
 
+	// Check for RNG (radio range in miles, convert to km)
+	if strings.HasPrefix(comment, "RNG") && len(comment) >= 7 {
+		if rng, err := strconv.Atoi(comment[3:7]); err == nil {
+			rngKm := float64(rng) * 1.609344 // miles to km
+			p.RadioRange = &rngKm
+			comment = comment[7:]
+		}
+	}
+
 	// Check for course/speed: CCC/SSS
 	if len(comment) >= 7 && comment[3] == '/' {
 		courseStr := comment[0:3]
