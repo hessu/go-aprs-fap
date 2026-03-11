@@ -138,6 +138,20 @@ func isValidSymbolTable(c byte) bool {
 	return c == '/' || c == '\\' || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9')
 }
 
+// isPhgBase validates the first 4 characters of PHG data: digit, 0x30-0x7e, digit, digit.
+func isPhgBase(s string) bool {
+	return len(s) >= 4 &&
+		s[0] >= '0' && s[0] <= '9' &&
+		s[1] >= 0x30 && s[1] <= 0x7e &&
+		s[2] >= '0' && s[2] <= '9' &&
+		s[3] >= '0' && s[3] <= '9'
+}
+
+// isUpperAlphaNum checks if a byte is 0-9 or A-Z.
+func isUpperAlphaNum(c byte) bool {
+	return (c >= '0' && c <= '9') || (c >= 'A' && c <= 'Z')
+}
+
 // parseCompressedPosition parses a compressed position report.
 func (p *Packet) parseCompressedPosition(body string, opt *options) error {
 	p.Format = FormatCompressed
@@ -273,13 +287,16 @@ func (p *Packet) parsePositionComment(comment string) {
 		return
 	}
 
-	// Check for PHG data
-	if strings.HasPrefix(comment, "PHG") && len(comment) >= 7 {
-		p.PHG = comment[3:7]
-		comment = comment[7:]
-		// Skip separator after PHG
-		if len(comment) > 0 && comment[0] == '/' {
-			comment = comment[1:]
+	// Check for PHG data (PHGRA 5-char variant, or standard 4-char PHG)
+	if strings.HasPrefix(comment, "PHG") && len(comment) >= 7 && isPhgBase(comment[3:7]) {
+		if len(comment) >= 9 && isUpperAlphaNum(comment[7]) && comment[8] == '/' {
+			// PHGRA: 5 data chars followed by '/', trim the '/' from comment
+			p.PHG = comment[3:8]
+			comment = comment[9:]
+		} else {
+			// Standard PHG: 4 data chars
+			p.PHG = comment[3:7]
+			comment = comment[7:]
 		}
 	}
 
@@ -309,6 +326,11 @@ func (p *Packet) parsePositionComment(comment string) {
 
 	// Check for DAO extension: !Wxx! or similar
 	comment = p.parseDAO(comment)
+
+	// Strip a leading '/' delimiter (after PHG or other data)
+	if len(comment) > 0 && comment[0] == '/' {
+		comment = comment[1:]
+	}
 
 	p.Comment = strings.TrimSpace(comment)
 }

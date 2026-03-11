@@ -124,7 +124,7 @@ type Packet struct {
 	Messaging *bool // Messaging capability (nil if unknown)
 
 	// PHG and radio range
-	PHG        string   // PHG data string (4 digits)
+	PHG        string   // PHG data string (4 chars, or 5 for PHGRA)
 	RadioRange *float64 // Radio range in km
 
 	// Timestamp

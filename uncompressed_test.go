@@ -216,6 +216,51 @@ func TestUncompressedWhitespaceTrimming(t *testing.T) {
 	}
 }
 
+func TestPHGRA(t *testing.T) {
+	// PHGRA: 5 data chars followed by '/' which gets trimmed
+	packet := "OH2RDP-1>BEACON-15,OH2RDG*,WIDE:!6028.51N/02505.68E#PHG72205/RELAY,WIDE, OH2AP Jarvenpaa"
+
+	p, err := Parse(packet)
+	if err != nil {
+		t.Fatalf("failed to parse: %v", err)
+	}
+	if p.PHG != "72205" {
+		t.Errorf("phg = %q, want %q", p.PHG, "72205")
+	}
+	if p.Comment != "RELAY,WIDE, OH2AP Jarvenpaa" {
+		t.Errorf("comment = %q, want %q", p.Comment, "RELAY,WIDE, OH2AP Jarvenpaa")
+	}
+}
+
+func TestPHGRALetterSuffix(t *testing.T) {
+	// PHGRA with letter suffix A-Z
+	packet := "OH2RDP-1>BEACON-15,OH2RDG*,WIDE:!6028.51N/02505.68E#PHG7220Z/some comment"
+
+	p, err := Parse(packet)
+	if err != nil {
+		t.Fatalf("failed to parse: %v", err)
+	}
+	if p.PHG != "7220Z" {
+		t.Errorf("phg = %q, want %q", p.PHG, "7220Z")
+	}
+	if p.Comment != "some comment" {
+		t.Errorf("comment = %q, want %q", p.Comment, "some comment")
+	}
+}
+
+func TestPHGInvalidNotParsed(t *testing.T) {
+	// Invalid PHG (second char outside 0x30-0x7e range) should not be parsed
+	packet := "OH2RDP-1>BEACON-15,OH2RDG*,WIDE:!6028.51N/02505.68E#PHG7\x2f20some comment"
+
+	p, err := Parse(packet)
+	if err != nil {
+		t.Fatalf("failed to parse: %v", err)
+	}
+	if p.PHG != "" {
+		t.Errorf("phg = %q, want empty (invalid PHG should not be parsed)", p.PHG)
+	}
+}
+
 func TestUncompressedTimestampAltitude(t *testing.T) {
 	// Position with timestamp and altitude
 	packet := "YB1RUS-9>APOTC1,WIDE2-2,qAS,YC0GIN-1:/180000z0609.31S/10642.85E>058/010/A=000079 13.8V 15CYB1RUS-9 Mobile Tracker"
