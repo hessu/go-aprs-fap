@@ -187,6 +187,10 @@ func main() {
 ### Functions
 
 - `fap.Dial(addr, callsign, passcode, appName, appVer, filter...)` — connect, authenticate, and return a `*Conn`
+- `fap.Connect(addr, fap.ConnOptions{...})` — like `Dial`, with dial/login timeouts, TLS, a custom dialer, a `NoLogin` mode for driving the handshake by hand, a verbatim `LoginLine`, and an `OnComment` hook for `#` lines
+- `Conn.Login()` — send the login line and return the parsed `*fap.LogResp` (callsign, verified, server); a rejected login is not an error
+- `Conn.Banner()` — the server's first `#` greeting line
+- `Conn.SendRaw(b)`, `Conn.CloseWrite()`, `Conn.NetConn()` — raw writes, TCP half-close, and the underlying connection
 - `Conn.ReadLine(timeout)` — read one line (strips CR/LF)
 - `Conn.ReadPacket(timeout)` — read one non-comment line (skips `#` keepalives)
 - `Conn.SendLine(line)` — send a line (appends CR/LF)
