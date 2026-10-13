@@ -186,8 +186,8 @@ func (p *Packet) parseMicE(opt *options) error {
 		comment = body[8:]
 	}
 
-	// Check for base-91 telemetry |...| first (before altitude)
-	comment = p.parseMicEBase91Telemetry(comment)
+	// Check for base-91 comment telemetry |...| first (before altitude)
+	comment = p.parseBase91CommentTelemetry(comment)
 
 	// Check for altitude in Mic-E format: XXX} where XXX are 3 base-91 chars
 	// followed by '}' as terminator. Altitude in meters, origin at -10000m.
@@ -213,103 +213,6 @@ func (p *Packet) parseMicE(opt *options) error {
 	p.Comment = comment
 
 	return nil
-}
-
-// isBase91TelemetryChar checks if a character is valid in base-91 telemetry (0x21-0x7B).
-func isBase91TelemetryChar(c byte) bool {
-	return c >= '!' && c <= '{'
-}
-
-// parseMicEBase91Telemetry extracts base-91 encoded telemetry from mic-e comments.
-// Format: |ssaabbccddee| where ss=sequence, aa-ee=values in base-91
-// or shorter: |ssaa| for just sequence and one value.
-// Uses last-match semantics (greedy) to match Perl's regex behavior.
-func (p *Packet) parseMicEBase91Telemetry(comment string) string {
-	// Search from the end for the closing |, then find the matching opening |
-	// with valid base-91 content between them. This matches Perl's greedy (.*)
-	// before the first \| in the regex.
-	bestStart := -1
-	bestEnd := -1
-
-	for end := len(comment) - 1; end >= 0; end-- {
-		if comment[end] != '|' {
-			continue
-		}
-		// Try to find an opening | before this one with valid content
-		for start := end - 1; start >= 0; start-- {
-			if comment[start] != '|' {
-				continue
-			}
-			content := comment[start+1 : end]
-			// Must be even length, >= 4 chars (seq pair + at least 1 value pair)
-			if len(content) < 4 || len(content)%2 != 0 {
-				continue
-			}
-			// All chars must be valid base-91
-			valid := true
-			for j := 0; j < len(content); j++ {
-				if !isBase91TelemetryChar(content[j]) {
-					valid = false
-					break
-				}
-			}
-			if !valid {
-				continue
-			}
-			// Found a valid match - use the one with the latest start (greedy)
-			if start > bestStart {
-				bestStart = start
-				bestEnd = end
-			}
-			break // only need the first valid opening | for this closing |
-		}
-		if bestStart >= 0 {
-			break // use the last (rightmost) closing | that has a valid match
-		}
-	}
-
-	if bestStart < 0 {
-		return comment
-	}
-
-	tlmData := comment[bestStart+1 : bestEnd]
-	pairs := len(tlmData) / 2
-
-	// First pair is sequence number
-	seq := (int(tlmData[0])-33)*91 + (int(tlmData[1]) - 33)
-
-	tlm := &Telemetry{
-		Seq: seq,
-	}
-
-	// Remaining pairs are values (up to 5)
-	vals := make([]*float64, 5)
-	for i := 1; i < pairs && i <= 5; i++ {
-		idx := i * 2
-		val := float64((int(tlmData[idx])-33)*91 + (int(tlmData[idx+1]) - 33))
-		vals[i-1] = &val
-	}
-
-	// If we have 7 pairs, the last one is the binary bits
-	// Perl uses unpack('b8', ...) which is LSB-first bit order
-	if pairs >= 7 {
-		bitsVal := (int(tlmData[12])-33)*91 + (int(tlmData[13]) - 33)
-		var bits [8]byte
-		for b := range 8 {
-			if bitsVal&(1<<uint(b)) != 0 {
-				bits[b] = '1'
-			} else {
-				bits[b] = '0'
-			}
-		}
-		tlm.Bits = string(bits[:])
-	}
-
-	tlm.Vals = vals
-	p.TelemetryData = tlm
-
-	// Remove the telemetry from the comment
-	return strings.TrimSpace(comment[:bestStart] + comment[bestEnd+1:])
 }
 
 // isHexString checks if all characters in a string are hexadecimal.

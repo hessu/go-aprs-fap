@@ -245,8 +245,8 @@ func (p *Packet) parseCompressedPosition(body string, opt *options) error {
 			return nil
 		}
 
-		// Strip inline telemetry |...|
-		comment = stripInlineTelemetry(comment)
+		// Check for base-91 comment telemetry |...|
+		comment = p.parseBase91CommentTelemetry(comment)
 
 		// Check for DAO extension
 		comment = p.parseDAO(comment)
@@ -255,19 +255,6 @@ func (p *Packet) parseCompressedPosition(body string, opt *options) error {
 	}
 
 	return nil
-}
-
-// stripInlineTelemetry removes |...| inline telemetry from comments.
-func stripInlineTelemetry(comment string) string {
-	// Look for |...| at the end of the comment
-	if idx := strings.LastIndex(comment, "|"); idx > 0 {
-		firstIdx := strings.Index(comment, "|")
-		if firstIdx < idx {
-			// Remove the telemetry section
-			comment = comment[:firstIdx] + comment[idx+1:]
-		}
-	}
-	return comment
 }
 
 // parsePositionComment parses the comment section of an uncompressed position.
@@ -332,6 +319,10 @@ func (p *Packet) parsePositionComment(comment string) {
 			comment = comment[:idx] + comment[idx+9:]
 		}
 	}
+
+	// Check for base-91 comment telemetry |...|, which per the spec comes
+	// after the free-form comment and before the DAO extension
+	comment = p.parseBase91CommentTelemetry(comment)
 
 	// Check for DAO extension: !Wxx! or similar
 	comment = p.parseDAO(comment)
