@@ -195,7 +195,73 @@ func main() {
 - `Conn.ReadPacket(timeout)` — read one non-comment line (skips `#` keepalives)
 - `Conn.SendLine(line)` — send a line (appends CR/LF)
 - `Conn.Close()` — close the connection
+- `Conn.SetFilter(filter)` — change the filter after login
 - `fap.AprsPasscode(callsign)` — compute the APRS-IS passcode for a callsign
+
+### IS2
+
+The client also speaks IS2, the binary protocol of
+[aprsc](https://github.com/hessu/aprsc) which carries the packets in
+Protocol Buffers messages, together with metadata: which servers received
+the packet and when, and how the receiver heard it (RSSI, SNR, modem, bit
+rate, frequency). The Go types of the protocol are in the `aprsis2`
+package, generated from a copy of `aprsis2.proto` of aprsc.
+
+A connection gets to IS2 in one of two ways:
+
+- **Upgrade, by default.** When logging in on an ordinary plaintext
+  APRS-IS port, the client offers an upgrade to IS2 on a comment line
+  before its login line. A server which supports it switches the connection
+  to IS2; other servers ignore the comment and the connection stays on
+  plaintext. Set `ConnOptions.NoIS2Upgrade` to not offer it. It is not
+  offered with a custom `LoginLine` either.
+- **An IS2 port.** Set `ConnOptions.IS2` to connect to a port of the server
+  which speaks IS2 from the start.
+
+`Conn.IS2()` tells which protocol the connection ended up with. The same
+methods work with both, so a client does not need to care: `ReadPacket`
+returns packets, and `SendLine` sends them. On IS2, `ReadLine` returns
+packets too, since there are no comment lines; comment lines given to
+`SendLine` are not sent, except for `#filter ...`, which is sent as the IS2
+request to set the filter.
+
+```go
+c, err := fap.Connect("aprsc.example.org:14580", fap.ConnOptions{
+    Callsign: "N0CALL", Passcode: "-1", AppName: "myapp", AppVer: "0.1",
+    Filter: "r/60.18/24.94/100",
+})
+if err != nil {
+    return err
+}
+defer c.Close()
+
+for {
+    p, err := c.ReadISPacket(30 * time.Second)
+    if err != nil {
+        return err
+    }
+    fmt.Printf("%s\n", p.GetIsPacketData())
+    if _, ok := p.GetOptionalRxRssiDbm().(*aprsis2.ISPacket_RxRssiDbm); ok {
+        fmt.Printf("  RSSI %.1f dBm\n", p.GetRxRssiDbm())
+    }
+    for _, r := range p.GetReceived() {
+        fmt.Printf("  received by %s from %s\n", r.GetServerId(), r.GetUsername())
+    }
+}
+```
+
+- `Conn.IS2()` — whether the connection speaks IS2
+- `Conn.ReadISPacket(timeout)` — read one packet as an `*aprsis2.ISPacket`, with its metadata; on plaintext, the packet alone
+- `Conn.SendISPacket(p)` — send a packet with its reception metadata; on plaintext, the metadata goes on an `#is2-meta` comment line, which aprsc accepts on its igate and client ports
+- `Conn.ServerSignature()`, `Conn.LoginReply()` — the server's IS2 signature and login reply
+- `Conn.SendIS2Message(m)` — send any IS2 message
+- `ConnOptions.OnIS2Message` — a hook for the IS2 messages received other than packets, like `OnComment` for plaintext
+- `LogResp.IS2`, `LogResp.FilterRejected` — the login was done over IS2; the server refused the filter given at login
+- A login the server rejects over IS2 is an `*fap.IS2LoginError`, with the reason code of the reply; `SetFilter` returns `fap.ErrFilterRejected` if the server does not apply the filter
+
+The server's IS2 keepalive pings are answered while reading, so a client
+must keep reading from the connection, as it does anyway. A `Conn` can be
+read by one goroutine and written to by another, but not read by several.
 
 ## Position encoding
 

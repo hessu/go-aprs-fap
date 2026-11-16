@@ -40,7 +40,8 @@ func TestDial(t *testing.T) {
 			return
 		}
 		login := string(buf[:n])
-		if !strings.HasPrefix(login, "user N0CALL pass 13023") {
+		// the upgrade to IS2 is offered by default, before the login line
+		if !strings.HasPrefix(login, "#is2 hello v=1\r\nuser N0CALL pass 13023") {
 			serverErr <- fmt.Errorf("unexpected login: %q", login)
 			return
 		}

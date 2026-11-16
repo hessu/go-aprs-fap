@@ -16,7 +16,17 @@ go test -cover ./...                        # Tests with coverage
 
 This is a Go port of the Perl `Ham::APRS::FAP` module — an APRS (Automatic
 Packet Reporting System) packet parser.  Package name is `fap`, module path
-`github.com/hessu/go-aprs-fap`.  No external dependencies (stdlib only).
+`github.com/hessu/go-aprs-fap`.  The parser uses the standard library only;
+the APRS-IS client depends on `google.golang.org/protobuf` for IS2.
+
+The APRS-IS client is in `aprsis.go` (plaintext protocol, login) and
+`aprsis_is2.go` (IS2: framing, login, packets with metadata, the upgrade
+of a plaintext connection).  The `aprsis2` package has the generated Go
+types of the IS2 protocol; `aprsis2/aprsis2.proto` is a copy of
+`src/aprsis2.proto` of aprsc and must not be edited here.  After updating
+it from aprsc, run `go generate ./aprsis2` (needs `protoc` and
+`protoc-gen-go`) and commit the generated file.  The IS2 protocol is
+documented in `doc/IS2*.md` of aprsc.
 
 The original perl module is available at ../perl-aprs-fap
 for inspection at any time.
