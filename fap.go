@@ -19,6 +19,8 @@ package fap
 import (
 	"strings"
 	"time"
+
+	"github.com/hessu/go-aprs-fap/aprsis2"
 )
 
 // PacketType represents the type of an APRS packet.
@@ -169,6 +171,11 @@ type Packet struct {
 
 	// Warnings collected during parsing (non-fatal issues)
 	Warnings []ParseError
+
+	// IS2 is the ISPacket the packet was parsed from by ParseISPacket,
+	// with the metadata the IS2 protocol carries with a packet. It is
+	// nil for packets parsed from a string.
+	IS2 *aprsis2.ISPacket
 }
 
 // options holds internal parsing configuration.
@@ -229,6 +236,18 @@ func Parse(raw string, opts ...Option) (*Packet, error) {
 	}
 
 	return p, nil
+}
+
+// ParseISPacket parses the APRS packet of an IS2 ISPacket, as returned by
+// Conn.ReadISPacket. It works like Parse on the packet data, and sets the
+// IS2 field of the returned Packet to p, so that the metadata IS2 carries
+// with the packet (the servers which received it, and how the receiver
+// heard it) is available together with the parsed packet.
+func ParseISPacket(p *aprsis2.ISPacket, opts ...Option) (*Packet, error) {
+	pkt, err := Parse(string(p.GetIsPacketData()), opts...)
+	pkt.IS2 = p
+
+	return pkt, err
 }
 
 // fail returns a *ParseError with the given sentinel's code and the specific message.

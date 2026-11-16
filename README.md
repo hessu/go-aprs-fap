@@ -6,8 +6,9 @@ This is a Go port of the [Ham::APRS::FAP](https://metacpan.org/pod/Ham::APRS::FA
 Perl module, a fairly complete APRS (Automatic Packet Reporting System)
 parser. It parses normal, Mic-E and compressed location packets, NMEA
 location packets, objects, items, messages, telemetry and most weather
-packets. It is implemented in pure Go with no external dependencies
-(stdlib only).
+packets. It is implemented in pure Go; the only external dependency is
+the Go Protocol Buffers module, for the IS2 protocol of the APRS-IS
+client.
 
 The original Perl module is stable and fast enough to parse the APRS-IS
 stream in real time, and is used to power the <http://aprs.fi/> web site.
@@ -236,21 +237,35 @@ if err != nil {
 defer c.Close()
 
 for {
-    p, err := c.ReadISPacket(30 * time.Second)
+    isp, err := c.ReadISPacket(30 * time.Second)
     if err != nil {
         return err
     }
-    fmt.Printf("%s\n", p.GetIsPacketData())
-    if _, ok := p.GetOptionalRxRssiDbm().(*aprsis2.ISPacket_RxRssiDbm); ok {
-        fmt.Printf("  RSSI %.1f dBm\n", p.GetRxRssiDbm())
+
+    // the parsed packet, with the ISPacket in p.IS2
+    p, err := fap.ParseISPacket(isp)
+    if err != nil {
+        fmt.Printf("Parse error: %v\n", err)
+        continue
     }
-    for _, r := range p.GetReceived() {
+
+    fmt.Printf("%s> type=%s\n", p.SrcCallsign, p.Type)
+    if _, ok := p.IS2.GetOptionalRxRssiDbm().(*aprsis2.ISPacket_RxRssiDbm); ok {
+        fmt.Printf("  RSSI %.1f dBm\n", p.IS2.GetRxRssiDbm())
+    }
+    for _, r := range p.IS2.GetReceived() {
         fmt.Printf("  received by %s from %s\n", r.GetServerId(), r.GetUsername())
     }
 }
 ```
 
+`fap.ParseISPacket` works on a plaintext connection as well: `ReadISPacket`
+then returns the packet without metadata, so the same loop serves both
+protocols. The getters of `p.IS2` are safe to call on a packet parsed with
+`fap.Parse`, where `p.IS2` is nil.
+
 - `Conn.IS2()` — whether the connection speaks IS2
+- `fap.ParseISPacket(p, opts...)` — parse the APRS packet of an `*aprsis2.ISPacket` like `fap.Parse`, keeping the `ISPacket` and its metadata in `Packet.IS2`
 - `Conn.ReadISPacket(timeout)` — read one packet as an `*aprsis2.ISPacket`, with its metadata; on plaintext, the packet alone
 - `Conn.SendISPacket(p)` — send a packet with its reception metadata; on plaintext, the metadata goes on an `#is2-meta` comment line, which aprsc accepts on its igate and client ports
 - `Conn.ServerSignature()`, `Conn.LoginReply()` — the server's IS2 signature and login reply

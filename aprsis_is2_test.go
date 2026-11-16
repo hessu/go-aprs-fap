@@ -538,3 +538,45 @@ func TestSendIS2MessagePlaintext(t *testing.T) {
 		t.Error("SendIS2Message worked on a plaintext connection")
 	}
 }
+
+func TestParseISPacket(t *testing.T) {
+	isp := &aprsis2.ISPacket{
+		Type:              aprsis2.ISPacket_IS_PACKET,
+		IsPacketData:      []byte("N0CALL-1>APRS,qAR,N0CALL:!6028.51N/02505.68E>test"),
+		OptionalRxRssiDbm: &aprsis2.ISPacket_RxRssiDbm{RxRssiDbm: -97.5},
+		Received:          []*aprsis2.IS2Received{{ServerId: "T2TEST", Username: "N0CALL"}},
+	}
+
+	p, err := ParseISPacket(isp)
+	if err != nil {
+		t.Fatalf("ParseISPacket failed: %v", err)
+	}
+	if p.SrcCallsign != "N0CALL-1" || p.Type != PacketTypeLocation || p.Latitude == nil {
+		t.Errorf("packet not parsed: src %q type %v latitude %v", p.SrcCallsign, p.Type, p.Latitude)
+	}
+	if p.OrigPacket != string(isp.GetIsPacketData()) {
+		t.Errorf("OrigPacket = %q", p.OrigPacket)
+	}
+	if p.IS2 != isp || p.IS2.GetRxRssiDbm() != -97.5 || p.IS2.GetReceived()[0].GetServerId() != "T2TEST" {
+		t.Errorf("IS2 = %v, want the ISPacket parsed", p.IS2)
+	}
+
+	// options are passed on to the parser
+	p, err = ParseISPacket(&aprsis2.ISPacket{IsPacketData: []byte("N0CALL-1>APRS:@092345z4903.50N/07201.75W>")}, WithRawTimestamp())
+	if err != nil || p.RawTimestamp != "092345" {
+		t.Errorf("with WithRawTimestamp: RawTimestamp = %q, %v", p.RawTimestamp, err)
+	}
+
+	// a packet which fails to parse still has the ISPacket
+	bad := &aprsis2.ISPacket{IsPacketData: []byte("no body")}
+	p, err = ParseISPacket(bad)
+	if !errors.Is(err, ErrPacketNoBody) || p == nil || p.IS2 != bad {
+		t.Errorf("ParseISPacket of a bad packet = %+v, %v", p, err)
+	}
+
+	// Parse leaves the field nil, and its getters are still usable
+	p, err = Parse("N0CALL-1>APRS:>status")
+	if err != nil || p.IS2 != nil || p.IS2.GetRxRssiDbm() != 0 || len(p.IS2.GetReceived()) != 0 {
+		t.Errorf("Parse: IS2 = %v, %v", p.IS2, err)
+	}
+}
