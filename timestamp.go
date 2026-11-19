@@ -48,6 +48,20 @@ func dhmTimestamp(dd, hh, mm int, now time.Time) (*time.Time, error) {
 	return nil, fmt.Errorf("day %d does not exist in the previous or current month", dd)
 }
 
+// isTimestampFormat tells whether s has the format of a timestamp: six
+// digits and the type 'z', 'h' or '/'.
+func isTimestampFormat(s string) bool {
+	if len(s) != 7 {
+		return false
+	}
+	for i := 0; i < 6; i++ {
+		if s[i] < '0' || s[i] > '9' {
+			return false
+		}
+	}
+	return s[6] == 'z' || s[6] == 'h' || s[6] == '/'
+}
+
 // parseTimestampAt parses a 7-character APRS timestamp, which is relative
 // to the time now.
 func parseTimestampAt(s string, now time.Time) (*time.Time, error) {
