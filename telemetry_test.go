@@ -313,3 +313,32 @@ func TestRegularMessageNotTelemetryMessage(t *testing.T) {
 		t.Errorf("type = %q, want %q", p.Type, PacketTypeMessage)
 	}
 }
+
+// TestTelemetryShortBits tests telemetry with fewer than 8 bits: the
+// missing bits at the end are zeros. The first packet is from APRS-IS.
+// The expected values are from the Perl module.
+func TestTelemetryShortBits(t *testing.T) {
+	tests := []struct {
+		bits string
+		want string
+	}{
+		{"000", "00000000"},
+		{"1", "10000000"},
+		{"10101010", "10101010"},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.bits, func(t *testing.T) {
+			p, err := Parse("TEST-15>APRS,WIDE1-1,qAR,SK3W-10:T#071,162,007,-012,0822,0000," + tc.bits)
+			if err != nil {
+				t.Fatalf("failed to parse: %v", err)
+			}
+			if p.TelemetryData == nil {
+				t.Fatal("telemetry is nil")
+			}
+			if p.TelemetryData.Bits != tc.want {
+				t.Errorf("bits = %q, want %q", p.TelemetryData.Bits, tc.want)
+			}
+		})
+	}
+}

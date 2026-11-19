@@ -83,22 +83,17 @@ func (p *Packet) parseTelemetry(opt *options) error {
 	}
 	tlm.Vals = vals
 
-	// Parse digital bits (field 7, 8-bit binary string)
+	// Parse digital bits (field 7, 8-bit binary string). Some stations
+	// send fewer than 8 bits; like the Perl module, the missing bits at
+	// the end are zeros.
 	if len(parts) >= 7 {
 		bitsField := strings.TrimSpace(parts[6])
-		if len(bitsField) >= 8 {
-			// Validate that the first 8 chars are binary
-			bits := bitsField[:8]
-			valid := true
-			for _, c := range bits {
-				if c != '0' && c != '1' {
-					valid = false
-					break
-				}
-			}
-			if valid {
-				tlm.Bits = bits
-			}
+		n := 0
+		for n < len(bitsField) && n < 8 && (bitsField[n] == '0' || bitsField[n] == '1') {
+			n++
+		}
+		if n > 0 {
+			tlm.Bits = bitsField[:n] + strings.Repeat("0", 8-n)
 		}
 	}
 
