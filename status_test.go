@@ -59,3 +59,51 @@ func TestStatusWithTimestamp(t *testing.T) {
 		t.Errorf("status = %q, want %q", p.Status, msg)
 	}
 }
+
+// TestStatusTimestampFormat tests that only a DDHHMMz timestamp is taken
+// from the start of a status report; other text is status text, even if
+// its 7th character is 'z' or '/'. The first two packets are from
+// APRS-IS. The expected values are from the Perl module.
+func TestStatusTimestampFormat(t *testing.T) {
+	tests := []struct {
+		name    string
+		packet  string
+		status  string
+		hasTime bool
+	}{
+		{
+			name:   "locator and slash",
+			packet: "TEST-15>APWW11,TCPIP*,qAC,T2CSNGRAD:>CN85uj/# CN85uj Winlink Gateway 144.93",
+			status: "CN85uj/# CN85uj Winlink Gateway 144.93",
+		},
+		{
+			name:   "local time format",
+			packet: "TEST-2>APRS,WIDE1-1,qAS,TEST-3:>191350/M/V -- NPY PH43",
+			status: "191350/M/V -- NPY PH43",
+		},
+		{
+			name:    "zulu time",
+			packet:  "TEST>APRS:>191350zHello",
+			status:  "Hello",
+			hasTime: true,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			p, err := Parse(tc.packet)
+			if err != nil {
+				t.Fatalf("failed to parse: %v", err)
+			}
+			if p.Status != tc.status {
+				t.Errorf("status = %q, want %q", p.Status, tc.status)
+			}
+			if (p.Timestamp != nil) != tc.hasTime {
+				t.Errorf("timestamp = %v, want set: %v", p.Timestamp, tc.hasTime)
+			}
+			if len(p.Warnings) > 0 {
+				t.Errorf("warnings = %v, want none", p.Warnings)
+			}
+		})
+	}
+}

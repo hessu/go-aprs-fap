@@ -12,19 +12,17 @@ func (p *Packet) parseStatus(opt *options) error {
 
 	body := p.Body[1:] // skip '>'
 
-	// Check if body starts with a timestamp (7 chars ending in z, h, or /)
-	if len(body) >= 7 {
-		indicator := body[6]
-		if indicator == 'z' || indicator == '/' {
-			// Timestamp: DDHHMMz or DDHHMM/
-			ts, err := parseTimestamp(body[:7])
-			if err != nil {
-				p.warn(ErrTimestampInvalid, fmt.Sprintf("invalid timestamp: %v", err))
-			} else {
-				p.Timestamp = ts
-			}
-			body = body[7:]
+	// Check if body starts with a timestamp. Only the DDHHMMz format is
+	// allowed in a status report, as in the Perl module; other text is
+	// status text.
+	if len(body) >= 7 && body[6] == 'z' && isTimestampFormat(body[:7]) {
+		ts, err := parseTimestamp(body[:7])
+		if err != nil {
+			p.warn(ErrTimestampInvalid, fmt.Sprintf("invalid timestamp: %v", err))
+		} else {
+			p.Timestamp = ts
 		}
+		body = body[7:]
 	}
 
 	p.Status = body
