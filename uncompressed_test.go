@@ -332,3 +332,41 @@ func TestUncompressedBasicYC0SHR(t *testing.T) {
 		t.Errorf("longitude = %s, want 106.74350", got)
 	}
 }
+
+// TestUncompressedAmbiguityCenter tests that an ambiguous position is in
+// the center of the ambiguous area. The first packet is from APRS-IS,
+// the others have the same position with more ambiguity, and another
+// position which is not exactly representable in floating point. The
+// expected values are from the Perl module.
+func TestUncompressedAmbiguityCenter(t *testing.T) {
+	tests := []struct {
+		pos string
+		amb int
+		lat string
+		lon string
+	}{
+		{"4854.8 N/12235.3 W", 1, "48.9141666667", "-122.5891666667"},
+		{"4854.  N/12235.  W", 2, "48.9083333333", "-122.5916666667"},
+		{"485 .  N/1223 .  W", 3, "48.9166666667", "-122.5833333333"},
+		{"48  .  N/122  .  W", 4, "48.5000000000", "-122.5000000000"},
+		{"4807.1 N/12201.1 W", 1, "48.1191666667", "-122.0191666667"},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.pos, func(t *testing.T) {
+			p, err := Parse("TEST-5>APGRWO,WIDE1-1,WIDE2-1,qAO,WWU:!" + tc.pos + "-/A=000072")
+			if err != nil {
+				t.Fatalf("failed to parse: %v", err)
+			}
+			if p.PosAmbiguity == nil || *p.PosAmbiguity != tc.amb {
+				t.Errorf("posambiguity = %v, want %d", p.PosAmbiguity, tc.amb)
+			}
+			if got := fmt.Sprintf("%.10f", *p.Latitude); got != tc.lat {
+				t.Errorf("latitude = %s, want %s", got, tc.lat)
+			}
+			if got := fmt.Sprintf("%.10f", *p.Longitude); got != tc.lon {
+				t.Errorf("longitude = %s, want %s", got, tc.lon)
+			}
+		})
+	}
+}

@@ -515,22 +515,23 @@ func parseDegreesMinutes(s string, degDigits int, computeAmbiguity bool, knownAm
 		}
 	}
 
-	// Build minutes as MM.MM
-	mm := float64(minDigits[0])*10 + float64(minDigits[1]) + float64(minDigits[2])*0.1 + float64(minDigits[3])*0.01
-
-	// For ambiguous positions, center in the ambiguity box
-	if ambiguity > 0 {
-		switch ambiguity {
-		case 1:
-			mm = math.Floor(mm/0.1)*0.1 + 0.05
-		case 2:
-			mm = math.Floor(mm) + 0.5
-		case 3:
-			mm = math.Floor(mm/10)*10 + 5
-		case 4:
-			deg = math.Floor(deg)
-			mm = 30
-		}
+	// Build minutes as MM.MM. For ambiguous positions, center in the
+	// ambiguity box. The center is computed from the digits, not by
+	// rounding the minutes down, which floating point can get wrong:
+	// math.Floor(54.8/0.1) is 547.
+	d := func(i int) float64 { return float64(minDigits[i]) }
+	var mm float64
+	switch ambiguity {
+	case 1:
+		mm = d(0)*10 + d(1) + d(2)*0.1 + 0.05
+	case 2:
+		mm = d(0)*10 + d(1) + 0.5
+	case 3:
+		mm = d(0)*10 + 5
+	case 4:
+		mm = 30
+	default:
+		mm = d(0)*10 + d(1) + d(2)*0.1 + d(3)*0.01
 	}
 
 	return deg, mm, ambiguity, nil
