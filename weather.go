@@ -88,7 +88,7 @@ func parseWeatherFields(data string, wx *Weather) {
 				v := float64(val)
 				wx.WindDirection = &v
 				consumed = 1 + n
-			} else if n := skipWxField(data[i+1:], 3); n > 0 {
+			} else if n := skipWxField(data[i+1:]); n > 0 {
 				consumed = 1 + n
 			}
 		case 's': // Wind speed (mph, convert to m/s)
@@ -96,7 +96,7 @@ func parseWeatherFields(data string, wx *Weather) {
 				v := float64(val) * 0.44704
 				wx.WindSpeed = &v
 				consumed = 1 + n
-			} else if n := skipWxField(data[i+1:], 3); n > 0 {
+			} else if n := skipWxField(data[i+1:]); n > 0 {
 				consumed = 1 + n
 			}
 		case 'g': // Wind gust (mph, convert to m/s)
@@ -104,7 +104,7 @@ func parseWeatherFields(data string, wx *Weather) {
 				v := float64(val) * 0.44704
 				wx.WindGust = &v
 				consumed = 1 + n
-			} else if n := skipWxField(data[i+1:], 3); n > 0 {
+			} else if n := skipWxField(data[i+1:]); n > 0 {
 				consumed = 1 + n
 			}
 		case 't': // Temperature (Fahrenheit, convert to Celsius)
@@ -112,7 +112,7 @@ func parseWeatherFields(data string, wx *Weather) {
 				v := (float64(val) - 32.0) * 5.0 / 9.0
 				wx.Temp = &v
 				consumed = 1 + n
-			} else if n := skipWxField(data[i+1:], 3); n > 0 {
+			} else if n := skipWxField(data[i+1:]); n > 0 {
 				consumed = 1 + n
 			}
 		case 'r': // Rain last hour (hundredths of inch, convert to mm)
@@ -120,7 +120,7 @@ func parseWeatherFields(data string, wx *Weather) {
 				v := float64(val) * 0.254
 				wx.Rain1h = &v
 				consumed = 1 + n
-			} else if n := skipWxField(data[i+1:], 3); n > 0 {
+			} else if n := skipWxField(data[i+1:]); n > 0 {
 				consumed = 1 + n
 			}
 		case 'p': // Rain last 24h (hundredths of inch, convert to mm)
@@ -128,7 +128,7 @@ func parseWeatherFields(data string, wx *Weather) {
 				v := float64(val) * 0.254
 				wx.Rain24h = &v
 				consumed = 1 + n
-			} else if n := skipWxField(data[i+1:], 3); n > 0 {
+			} else if n := skipWxField(data[i+1:]); n > 0 {
 				consumed = 1 + n
 			}
 		case 'P': // Rain since midnight (hundredths of inch, convert to mm)
@@ -136,7 +136,7 @@ func parseWeatherFields(data string, wx *Weather) {
 				v := float64(val) * 0.254
 				wx.RainMidnight = &v
 				consumed = 1 + n
-			} else if n := skipWxField(data[i+1:], 3); n > 0 {
+			} else if n := skipWxField(data[i+1:]); n > 0 {
 				consumed = 1 + n
 			}
 		case 'h': // Humidity (%)
@@ -146,7 +146,7 @@ func parseWeatherFields(data string, wx *Weather) {
 				}
 				wx.Humidity = &val
 				consumed = 1 + n
-			} else if n := skipWxField(data[i+1:], 2); n > 0 {
+			} else if n := skipWxField(data[i+1:]); n > 0 {
 				consumed = 1 + n
 			}
 		case 'b': // Barometric pressure (tenths of millibar)
@@ -154,7 +154,7 @@ func parseWeatherFields(data string, wx *Weather) {
 				v := float64(val) / 10.0
 				wx.Pressure = &v
 				consumed = 1 + n
-			} else if n := skipWxField(data[i+1:], 5); n > 0 {
+			} else if n := skipWxField(data[i+1:]); n > 0 {
 				consumed = 1 + n
 			}
 		case 'L', 'l': // Luminosity
@@ -164,7 +164,7 @@ func parseWeatherFields(data string, wx *Weather) {
 				}
 				wx.Luminosity = &val
 				consumed = 1 + n
-			} else if n := skipWxField(data[i+1:], 3); n > 0 {
+			} else if n := skipWxField(data[i+1:]); n > 0 {
 				consumed = 1 + n
 			}
 		case 'O': // Snowfall: s followed by 3 digits (hundredths of inches, convert to mm)
@@ -173,7 +173,7 @@ func parseWeatherFields(data string, wx *Weather) {
 					v := float64(val) * 0.254 // hundredths of inch to mm
 					wx.Snow24h = &v
 					consumed = 2 + n
-				} else if n := skipWxField(data[i+2:], 3); n > 0 {
+				} else if n := skipWxField(data[i+2:]); n > 0 {
 					consumed = 2 + n
 				}
 			}
@@ -184,7 +184,7 @@ func parseWeatherFields(data string, wx *Weather) {
 				v := float64(val) / 10.0 * 0.3048
 				wx.WaterLevel = &v
 				consumed = 1 + n
-			} else if n := skipWxField(data[i+1:], 4); n > 0 {
+			} else if n := skipWxField(data[i+1:]); n > 0 {
 				consumed = 1 + n
 			}
 		case 'X': // Ionizing radiation (nanosieverts/hr, resistor code: AB*10^C)
@@ -194,7 +194,7 @@ func parseWeatherFields(data string, wx *Weather) {
 				v := float64(sig) * math.Pow(10, float64(exp))
 				wx.Radiation = &v
 				consumed = 1 + n
-			} else if n := skipWxField(data[i+1:], 3); n > 0 {
+			} else if n := skipWxField(data[i+1:]); n > 0 {
 				consumed = 1 + n
 			}
 		case 'V': // Battery voltage (tenths of volts)
@@ -202,11 +202,11 @@ func parseWeatherFields(data string, wx *Weather) {
 				v := float64(val) / 10.0
 				wx.BatteryVoltage = &v
 				consumed = 1 + n
-			} else if n := skipWxField(data[i+1:], 3); n > 0 {
+			} else if n := skipWxField(data[i+1:]); n > 0 {
 				consumed = 1 + n
 			}
 		case '#': // Raw rain counter
-			if n := skipWxField(data[i+1:], 3); n > 0 {
+			if n := skipWxField(data[i+1:]); n > 0 {
 				consumed = 1 + n
 			} else if _, n := parseWxInt(data[i+1:], 3); n > 0 {
 				consumed = 1 + n
@@ -242,19 +242,21 @@ func isSoftwareID(s string) bool {
 	return true
 }
 
-// skipWxField returns how many characters to skip for a missing weather field
-// (containing only dots or spaces) of maxLen. Returns 0 if the field contains
-// other characters (indicating it's not a weather field placeholder).
-func skipWxField(s string, maxLen int) int {
-	if len(s) < maxLen {
-		return 0
+// maxWxPlaceholder is the longest run of dots or spaces accepted as the
+// value of a missing weather field, as in the Perl module. Stations do
+// not always use the field's width: "h..." and "L...." are common.
+const maxWxPlaceholder = 5
+
+// skipWxField returns how many characters to skip for a missing weather
+// field: a run of 1 to maxWxPlaceholder dots or spaces, regardless of the
+// width of the field. Returns 0 if the field does not start with a dot or
+// a space (indicating it's not a weather field placeholder).
+func skipWxField(s string) int {
+	n := 0
+	for n < len(s) && n < maxWxPlaceholder && (s[n] == '.' || s[n] == ' ') {
+		n++
 	}
-	for i := range maxLen {
-		if s[i] != '.' && s[i] != ' ' {
-			return 0
-		}
-	}
-	return maxLen
+	return n
 }
 
 // parseWxInt extracts an integer of up to maxDigits from the string.

@@ -550,3 +550,72 @@ func TestWxPositionlessWithSnowfall(t *testing.T) {
 		t.Errorf("luminosity = %v, want 500", wx.Luminosity)
 	}
 }
+
+// TestWxPlaceholderLength tests missing weather fields whose placeholder
+// is not as long as the field: "h..." and "L....". The fields after them
+// must still be parsed. The packets are from APRS-IS, the expected values
+// are from the Perl module.
+func TestWxPlaceholderLength(t *testing.T) {
+	tests := []struct {
+		name     string
+		packet   string
+		pressure string
+		humidity string
+		software string
+		comment  string
+	}{
+		{
+			name:     "humidity",
+			packet:   "TEST>APRS,TCPIP*,qAC,AMBCWOP-2:@192201z4627.22N/12403.24W_.../...g...t...r000p000P000h...b10109AmbientCWOP.com",
+			pressure: "1010.9",
+			comment:  "AmbientCWOP.com",
+		},
+		{
+			name:     "all but pressure",
+			packet:   "TEST-9>APRS,TCPIP*,qAC,AMBCWOP-2:@192147z4533.17N/12233.22W_.../...g...t...r...p...P...h...b10139AmbientCWOP.com",
+			pressure: "1013.9",
+			comment:  "AmbientCWOP.com",
+		},
+		{
+			name:     "luminosity",
+			packet:   "TEST>APRS,TCPIP*,qAC,SECOND:@192200z3512.00N/07748.00W_051/000g000t062r000p000P000h66b10287L....DsIP",
+			pressure: "1028.7",
+			humidity: "66",
+			software: "DsIP",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			p, err := Parse(tc.packet)
+			if err != nil {
+				t.Fatalf("failed to parse: %v", err)
+			}
+			if p.Wx == nil {
+				t.Fatal("wx is nil")
+			}
+			if p.Wx.Pressure == nil {
+				t.Fatal("pressure is nil")
+			}
+			if got := fmt.Sprintf("%.1f", *p.Wx.Pressure); got != tc.pressure {
+				t.Errorf("pressure = %s, want %s", got, tc.pressure)
+			}
+			got := ""
+			if p.Wx.Humidity != nil {
+				got = fmt.Sprintf("%d", *p.Wx.Humidity)
+			}
+			if got != tc.humidity {
+				t.Errorf("humidity = %q, want %q", got, tc.humidity)
+			}
+			if p.Wx.Luminosity != nil {
+				t.Errorf("luminosity = %d, want nil", *p.Wx.Luminosity)
+			}
+			if p.Wx.Software != tc.software {
+				t.Errorf("software = %q, want %q", p.Wx.Software, tc.software)
+			}
+			if p.Comment != tc.comment {
+				t.Errorf("comment = %q, want %q", p.Comment, tc.comment)
+			}
+		})
+	}
+}
