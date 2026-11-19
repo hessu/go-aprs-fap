@@ -686,3 +686,57 @@ func TestWxShortAndLongValues(t *testing.T) {
 		})
 	}
 }
+
+// TestWxSnowfallAfterWind tests snowfall 's' in a position report, where
+// the wind speed is given before it in the CCC/SSS wind field. The first
+// packet is from APRS-IS, the second has a snowfall and a wind speed. The
+// expected values are from the Perl module.
+func TestWxSnowfallAfterWind(t *testing.T) {
+	tests := []struct {
+		name      string
+		packet    string
+		windSpeed string
+		snow      string
+		humidity  string
+	}{
+		{
+			name:      "zero",
+			packet:    "TEST-13>APPRPV,TCPIP*,qAS,TEST-1:/191653z3531.94N/07945.00W_270/000t059P000p000r000s000h62b10062",
+			windSpeed: "0.0",
+			snow:      "0.0",
+			humidity:  "62",
+		},
+		{
+			name:      "snowing",
+			packet:    "TEST-13>APPRPV,TCPIP*,qAS,TEST-1:/191653z3531.94N/07945.00W_270/005t031P000p000r000s012h62b10062",
+			windSpeed: "2.2",
+			snow:      "3.0",
+			humidity:  "62",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			p, err := Parse(tc.packet)
+			if err != nil {
+				t.Fatalf("failed to parse: %v", err)
+			}
+			wx := p.Wx
+			if wx == nil {
+				t.Fatal("wx is nil")
+			}
+			if wx.WindSpeed == nil || wx.Snow24h == nil || wx.Humidity == nil {
+				t.Fatalf("wind_speed %v, snow_24h %v, humidity %v: want all set", wx.WindSpeed, wx.Snow24h, wx.Humidity)
+			}
+			if got := fmt.Sprintf("%.1f", *wx.WindSpeed); got != tc.windSpeed {
+				t.Errorf("wind_speed = %s, want %s", got, tc.windSpeed)
+			}
+			if got := fmt.Sprintf("%.1f", *wx.Snow24h); got != tc.snow {
+				t.Errorf("snow_24h = %s, want %s", got, tc.snow)
+			}
+			if got := fmt.Sprintf("%d", *wx.Humidity); got != tc.humidity {
+				t.Errorf("humidity = %s, want %s", got, tc.humidity)
+			}
+		})
+	}
+}

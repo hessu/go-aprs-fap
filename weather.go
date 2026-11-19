@@ -75,14 +75,23 @@ func parseWeatherFromComment(comment string, wx *Weather) string {
 // Weather data uses single-character field identifiers followed by values.
 func parseWeatherFields(data string, wx *Weather) {
 	i := 0
+	var prev byte // the previous field
 	for i < len(data) {
 		if i+1 >= len(data) {
 			break
 		}
 
 		consumed := 0
+		field := data[i]
 
-		switch data[i] {
+		// 's' is the wind speed after the wind direction 'c' at the
+		// start of a positionless report, and snowfall elsewhere, like
+		// after the wind of a position report.
+		if field == 's' && prev != 'c' {
+			field = 'S'
+		}
+
+		switch field {
 		case 'c': // Wind direction (degrees)
 			if val, n := parseWxInt(data[i+1:], 3); n > 0 {
 				v := float64(val)
@@ -169,6 +178,14 @@ func parseWeatherFields(data string, wx *Weather) {
 			} else if n := skipWxField(data[i+1:]); n > 0 {
 				consumed = 1 + n
 			}
+		case 'S': // Snowfall, 's' not after 'c' (hundredths of inches, convert to mm)
+			if val, n := parseWxInt(data[i+1:], 3); n > 0 {
+				v := float64(val) * 0.254 // hundredths of inch to mm
+				wx.Snow24h = &v
+				consumed = 1 + n
+			} else if n := skipWxField(data[i+1:]); n > 0 {
+				consumed = 1 + n
+			}
 		case 'O': // Snowfall: s followed by 3 digits (hundredths of inches, convert to mm)
 			if i+1 < len(data) && data[i+1] == 's' {
 				if val, n := parseWxInt(data[i+2:], 3); n > 0 {
@@ -217,6 +234,7 @@ func parseWeatherFields(data string, wx *Weather) {
 
 		if consumed > 0 {
 			i += consumed
+			prev = data[i-consumed]
 		} else {
 			// Not a recognized weather field - remaining text is comment or software ID
 			remaining := strings.TrimSpace(data[i:])
