@@ -27,12 +27,12 @@ import (
 type PacketType string
 
 const (
-	PacketTypeLocation     PacketType = "location"
-	PacketTypeObject       PacketType = "object"
-	PacketTypeItem         PacketType = "item"
-	PacketTypeMessage      PacketType = "message"
-	PacketTypeWx           PacketType = "wx"
-	PacketTypeTelemetry    PacketType = "telemetry"
+	PacketTypeLocation         PacketType = "location"
+	PacketTypeObject           PacketType = "object"
+	PacketTypeItem             PacketType = "item"
+	PacketTypeMessage          PacketType = "message"
+	PacketTypeWx               PacketType = "wx"
+	PacketTypeTelemetry        PacketType = "telemetry"
 	PacketTypeTelemetryMessage PacketType = "telemetry-message"
 	PacketTypeStatus           PacketType = "status"
 	PacketTypeCapabilities     PacketType = "capabilities"
