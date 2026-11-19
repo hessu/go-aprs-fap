@@ -331,3 +331,42 @@ func TestTimestampDHMMonth(t *testing.T) {
 		})
 	}
 }
+
+// TestTimestampHMSDay tests picking the day of an hours/minutes/seconds
+// timestamp around midnight: the previous day if it is more than about
+// an hour in the future, the next day if it is more than about 23 hours
+// in the past. The expected values are from the Perl module, run with
+// the same time.
+func TestTimestampHMSDay(t *testing.T) {
+	tests := []struct {
+		now   string
+		stamp string
+		want  string
+	}{
+		{"2026-11-20 00:10:00", "235800h", "2026-11-19 23:58:00"},
+		{"2026-11-20 00:10:00", "001500h", "2026-11-20 00:15:00"},
+		{"2026-11-20 00:10:00", "010500h", "2026-11-20 01:05:00"},
+		{"2026-11-20 00:10:00", "011500h", "2026-11-20 01:15:00"},
+		{"2026-11-20 00:10:00", "011600h", "2026-11-19 01:16:00"},
+		{"2026-11-19 23:50:00", "000500h", "2026-11-20 00:05:00"},
+		{"2026-11-19 23:50:00", "233000h", "2026-11-19 23:30:00"},
+		{"2026-11-19 23:50:00", "004500h", "2026-11-20 00:45:00"},
+	}
+
+	const layout = "2006-01-02 15:04:05"
+	for _, tc := range tests {
+		t.Run(tc.now+" "+tc.stamp, func(t *testing.T) {
+			now, err := time.Parse(layout, tc.now)
+			if err != nil {
+				t.Fatal(err)
+			}
+			got, err := parseTimestampAt(tc.stamp, now)
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if s := got.UTC().Format(layout); s != tc.want {
+				t.Errorf("got %s, want %s", s, tc.want)
+			}
+		})
+	}
+}

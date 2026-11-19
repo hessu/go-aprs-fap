@@ -10,6 +10,14 @@ import (
 // may be, to allow for clock differences, like in the Perl module.
 const dhmFutureLimit = 43400 * time.Second
 
+// hmsFutureLimit and hmsPastLimit are how far into the future and the
+// past an hours/minutes/seconds timestamp may be on the current day,
+// before it is taken to be from the previous or the next day.
+const (
+	hmsFutureLimit = 3900 * time.Second
+	hmsPastLimit   = 82500 * time.Second
+)
+
 // parseTimestamp parses a 7-character APRS timestamp.
 // Formats:
 //   - DDHHMMz - Day/Hours/Minutes in UTC
@@ -99,8 +107,16 @@ func parseTimestampAt(s string, now time.Time) (*time.Time, error) {
 			return nil, fmt.Errorf("invalid seconds: %s", s[4:6])
 		}
 
+		// The timestamp is today, unless it is more than about an hour
+		// in the future (from yesterday) or more than about 23 hours in
+		// the past (for tomorrow), like in the Perl module.
 		now := now.UTC()
 		t := time.Date(now.Year(), now.Month(), now.Day(), hh, mm, ss, 0, time.UTC)
+		if t.Sub(now) > hmsFutureLimit {
+			t = t.AddDate(0, 0, -1)
+		} else if now.Sub(t) > hmsPastLimit {
+			t = t.AddDate(0, 0, 1)
+		}
 
 		return &t, nil
 
