@@ -831,3 +831,68 @@ func TestWxMalformedValue(t *testing.T) {
 		})
 	}
 }
+
+// TestWxPartialWind tests that a wind direction or speed which is not 3
+// digits is not accepted, like in the Perl module. The first packet is
+// from APRS-IS; the Perl module rejects its whole weather report, here
+// only the partial speed is ignored. The rest are from the Perl module.
+func TestWxPartialWind(t *testing.T) {
+	tests := []struct {
+		name   string
+		packet string
+		dir    string
+		speed  string
+		gust   string
+	}{
+		{
+			name:   "position, partial speed",
+			packet: "IR3UDH>APNW01,IR3BT*,WIDE2-1,qAR,IZ3GME-1:@010013z4606.24N/01139.23E_180/0 Monte Agaro 2050 mt",
+			dir:    "180",
+		},
+		{
+			name:   "positionless, partial direction and speed",
+			packet: "TEST>APRS:_08010200c12.s5..g005t068h50",
+			gust:   "2.2",
+		},
+		{
+			name:   "positionless, full wind",
+			packet: "TEST>APRS:_08010200c180s005g010t068h50",
+			dir:    "180",
+			speed:  "2.2",
+			gust:   "4.5",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			p, err := Parse(tc.packet)
+			if err != nil {
+				t.Fatalf("failed to parse: %v", err)
+			}
+			if p.Wx == nil {
+				t.Fatal("wx is nil")
+			}
+			got := ""
+			if p.Wx.WindDirection != nil {
+				got = fmt.Sprintf("%.0f", *p.Wx.WindDirection)
+			}
+			if got != tc.dir {
+				t.Errorf("wind direction = %q, want %q", got, tc.dir)
+			}
+			got = ""
+			if p.Wx.WindSpeed != nil {
+				got = fmt.Sprintf("%.1f", *p.Wx.WindSpeed)
+			}
+			if got != tc.speed {
+				t.Errorf("wind speed = %q, want %q", got, tc.speed)
+			}
+			got = ""
+			if p.Wx.WindGust != nil {
+				got = fmt.Sprintf("%.1f", *p.Wx.WindGust)
+			}
+			if got != tc.gust {
+				t.Errorf("wind gust = %q, want %q", got, tc.gust)
+			}
+		})
+	}
+}

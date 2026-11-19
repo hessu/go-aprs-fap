@@ -50,13 +50,14 @@ func parseWeatherFromComment(comment string, wx *Weather) string {
 		dirStr := comment[0:3]
 		spdStr := comment[4:7]
 
-		// Parse direction - can be dots/spaces for missing
-		if dir, n := parseWxInt(dirStr, 3); n > 0 {
+		// Parse direction and speed - both must be 3 digits, like in the
+		// Perl module, and can be dots/spaces for missing
+		if dir, n := parseWxDigits(dirStr, 3, 3); n > 0 {
 			v := float64(dir)
 			wx.WindDirection = &v
 		}
 
-		if spd, n := parseWxInt(spdStr, 3); n > 0 {
+		if spd, n := parseWxDigits(spdStr, 3, 3); n > 0 {
 			v := float64(spd) * 0.44704
 			wx.WindSpeed = &v
 		}
@@ -100,10 +101,12 @@ func parseWeatherFields(data string, wx *Weather) {
 		consumed := 0
 
 		switch data[i] {
-		case 'c': // Wind direction (degrees)
-			if val, n := parseWxInt(data[i+1:], 3); n > 0 {
-				v := float64(val)
-				wx.WindDirection = &v
+		case 'c': // Wind direction (degrees), exactly 3 digits
+			if val, ok, n := parseWxWind(data[i+1:]); n > 0 {
+				if ok {
+					v := float64(val)
+					wx.WindDirection = &v
+				}
 				consumed = 1 + n
 			} else if n := skipWxField(data[i+1:]); n > 0 {
 				consumed = 1 + n
@@ -113,10 +116,12 @@ func parseWeatherFields(data string, wx *Weather) {
 			// start of a positionless report, and snowfall elsewhere,
 			// like after the wind of a position report.
 			if prev == 'c' {
-				// Wind speed (mph, convert to m/s)
-				if val, n := parseWxInt(data[i+1:], 3); n > 0 {
-					v := float64(val) * 0.44704
-					wx.WindSpeed = &v
+				// Wind speed (mph, convert to m/s), exactly 3 digits
+				if val, ok, n := parseWxWind(data[i+1:]); n > 0 {
+					if ok {
+						v := float64(val) * 0.44704
+						wx.WindSpeed = &v
+					}
 					consumed = 1 + n
 				} else if n := skipWxField(data[i+1:]); n > 0 {
 					consumed = 1 + n
@@ -295,6 +300,23 @@ func malformedWxValue(s string) int {
 		return 0
 	}
 	return n
+}
+
+// parseWxWind parses the 3-character value of a wind direction or speed,
+// which must be 3 digits, like in the Perl module. n is 3 if s starts
+// with 3 characters of digits, spaces, dots or '-', and ok is true if they
+// are all digits; otherwise n is 0.
+func parseWxWind(s string) (val int, ok bool, n int) {
+	if len(s) < 3 {
+		return 0, false, 0
+	}
+	for i := 0; i < 3; i++ {
+		if c := s[i]; !(c >= '0' && c <= '9') && c != ' ' && c != '.' && c != '-' {
+			return 0, false, 0
+		}
+	}
+	val, n = parseWxDigits(s, 3, 3)
+	return val, n == 3, 3
 }
 
 // isSoftwareID checks if a string looks like a weather station software identifier
