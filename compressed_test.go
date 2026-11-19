@@ -302,3 +302,50 @@ func TestCompressedOverlayDigit(t *testing.T) {
 		})
 	}
 }
+
+// TestCompressedCommentExtensions tests the extensions in the comment of
+// a compressed position: the altitude, and the PHG. The packets are from
+// APRS-IS. The expected values are from the Perl module.
+func TestCompressedCommentExtensions(t *testing.T) {
+	tests := []struct {
+		name     string
+		packet   string
+		altitude string
+		phg      string
+		comment  string
+	}{
+		{
+			name:     "altitude",
+			packet:   "TEST-7>APRDF3,WIDE1-1,WIDE2-1,qAR,UBC39:=/5Vy//@?C[W3C/A=000256",
+			altitude: "78.0288",
+		},
+		{
+			name:    "PHG",
+			packet:  "TEST-10>APGRWO,WIDE1-1,WIDE2-1,qAR,K7NWS-2:!R6CVR/T{m#  CPHG5100Digipeater",
+			phg:     "5100",
+			comment: "Digipeater",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			p, err := Parse(tc.packet)
+			if err != nil {
+				t.Fatalf("failed to parse: %v", err)
+			}
+			got := ""
+			if p.Altitude != nil {
+				got = fmt.Sprintf("%.4f", *p.Altitude)
+			}
+			if got != tc.altitude {
+				t.Errorf("altitude = %q, want %q", got, tc.altitude)
+			}
+			if p.PHG != tc.phg {
+				t.Errorf("phg = %q, want %q", p.PHG, tc.phg)
+			}
+			if p.Comment != tc.comment {
+				t.Errorf("comment = %q, want %q", p.Comment, tc.comment)
+			}
+		})
+	}
+}

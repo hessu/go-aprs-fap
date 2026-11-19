@@ -234,29 +234,10 @@ func (p *Packet) parseCompressedPosition(body string, opt *options) error {
 		p.RadioRange = &rng
 	}
 
-	// Comment after compressed position
+	// The comment after a compressed position has the same extensions as
+	// after an uncompressed one, like the altitude, as in the Perl module.
 	if len(body) > 13 {
-		comment := body[13:]
-
-		// If symbol is weather, parse weather from comment.
-		if p.SymbolCode == '_' {
-			p.Type = PacketTypeWx
-			wx := &Weather{}
-			p.Wx = wx
-			wxComment := parseWeatherFromComment(comment, wx)
-			if wx.hasData() && wxComment != "" {
-				p.Comment = wxComment
-			}
-			return nil
-		}
-
-		// Check for base-91 comment telemetry |...|
-		comment = p.parseBase91CommentTelemetry(comment)
-
-		// Check for DAO extension
-		comment = p.parseDAO(comment)
-
-		p.Comment = strings.TrimSpace(comment)
+		p.parsePositionComment(body[13:])
 	}
 
 	return nil
