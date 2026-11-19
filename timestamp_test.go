@@ -284,3 +284,50 @@ func TestTimestampInvalidStatus(t *testing.T) {
 		t.Errorf("status = %q, want %q", p.Status, "Status text here")
 	}
 }
+
+// TestTimestampDHMMonth tests picking the month of a day/hours/minutes
+// timestamp: up to about 12 hours into the future, otherwise the latest
+// matching time in the past, in a month in which the day exists. The
+// expected values are from the Perl module, run with the same time.
+func TestTimestampDHMMonth(t *testing.T) {
+	tests := []struct {
+		now   string
+		stamp string
+		want  string // empty if invalid
+	}{
+		{"2026-11-19 22:00", "200432z", "2026-11-20 04:32"},
+		{"2026-11-19 22:00", "201200z", "2026-10-20 12:00"},
+		{"2026-11-19 22:00", "191200z", "2026-11-19 12:00"},
+		{"2026-11-19 22:00", "192300z", "2026-11-19 23:00"},
+		{"2026-11-19 22:00", "010000z", "2026-11-01 00:00"},
+		{"2026-12-01 00:10", "302350z", "2026-11-30 23:50"},
+		{"2026-12-01 00:10", "010020z", "2026-12-01 00:20"},
+		{"2026-03-01 01:00", "310000z", ""},
+		{"2026-03-01 01:00", "280000z", "2026-02-28 00:00"},
+		{"2026-01-31 23:00", "010100z", "2026-02-01 01:00"},
+		{"2026-01-31 23:00", "311200z", "2026-01-31 12:00"},
+	}
+
+	const layout = "2006-01-02 15:04"
+	for _, tc := range tests {
+		t.Run(tc.now+" "+tc.stamp, func(t *testing.T) {
+			now, err := time.Parse(layout, tc.now)
+			if err != nil {
+				t.Fatal(err)
+			}
+			got, err := parseTimestampAt(tc.stamp, now)
+			if tc.want == "" {
+				if err == nil {
+					t.Errorf("got %v, want an error", got)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if s := got.UTC().Format(layout); s != tc.want {
+				t.Errorf("got %s, want %s", s, tc.want)
+			}
+		})
+	}
+}
