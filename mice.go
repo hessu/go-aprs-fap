@@ -11,7 +11,7 @@ import (
 // micEDestDigit maps destination callsign characters to latitude digits and message bits.
 type micEDestInfo struct {
 	digit   int
-	msgBit  int // 0=standard, 1=custom
+	msgBit  int // message bit: 0, 1 for a standard one, 2 for a custom one
 	isNorth bool
 	isWest  bool // only applies to longitude offset check
 }
@@ -27,17 +27,17 @@ var micEDestTable = map[byte]micEDestInfo{
 	'7': {7, 0, false, false},
 	'8': {8, 0, false, false},
 	'9': {9, 0, false, false},
-	'A': {0, 1, false, false},
-	'B': {1, 1, false, false},
-	'C': {2, 1, false, false},
-	'D': {3, 1, false, false},
-	'E': {4, 1, false, false},
-	'F': {5, 1, false, false},
-	'G': {6, 1, false, false},
-	'H': {7, 1, false, false},
-	'I': {8, 1, false, false},
-	'J': {9, 1, false, false},
-	'K': {0, 1, false, false},
+	'A': {0, 2, false, false},
+	'B': {1, 2, false, false},
+	'C': {2, 2, false, false},
+	'D': {3, 2, false, false},
+	'E': {4, 2, false, false},
+	'F': {5, 2, false, false},
+	'G': {6, 2, false, false},
+	'H': {7, 2, false, false},
+	'I': {8, 2, false, false},
+	'J': {9, 2, false, false},
+	'K': {0, 2, false, false},
 	'L': {0, 0, false, false},
 	'P': {0, 1, true, false},
 	'Q': {1, 1, true, false},
@@ -338,7 +338,8 @@ func (p *Packet) parseMicETelemetry(comment string) string {
 	return strings.TrimLeft(remaining, " ")
 }
 
-// MicEMBitsToMessage converts Mic-E message bits to a human-readable message type.
+// MicEMBitsToMessage converts Mic-E message bits (Packet.MBits) to a
+// human-readable message type.
 func MicEMBitsToMessage(mbits string) string {
 	switch mbits {
 	case "111":
@@ -357,6 +358,20 @@ func MicEMBitsToMessage(mbits string) string {
 		return "Priority"
 	case "000":
 		return "Emergency"
+	case "222":
+		return "Custom 0"
+	case "220":
+		return "Custom 1"
+	case "202":
+		return "Custom 2"
+	case "200":
+		return "Custom 3"
+	case "022":
+		return "Custom 4"
+	case "020":
+		return "Custom 5"
+	case "002":
+		return "Custom 6"
 	default:
 		return "Unknown"
 	}

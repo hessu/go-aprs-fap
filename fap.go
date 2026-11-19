@@ -154,7 +154,7 @@ type Packet struct {
 	Capabilities map[string]string // Station capabilities
 
 	// Mic-E specifics
-	MBits       string // Mic-E message bits
+	MBits       string // Mic-E message bits A, B and C: 0, 1 for a standard one, 2 for a custom one
 	MiceMangled bool   // True if mic-e packet was repaired
 
 	// DAO

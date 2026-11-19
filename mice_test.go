@@ -386,6 +386,10 @@ func TestMicEMBitsToMessage(t *testing.T) {
 		{"111", "Off Duty"},
 		{"110", "En Route"},
 		{"000", "Emergency"},
+		{"222", "Custom 0"},
+		{"220", "Custom 1"},
+		{"002", "Custom 6"},
+		{"210", "Unknown"},
 	}
 	for _, tc := range tests {
 		got := MicEMBitsToMessage(tc.bits)
@@ -445,6 +449,37 @@ func TestMicEPosAmbiguity(t *testing.T) {
 			}
 			if got := fmt.Sprintf("%.10f", *p.Longitude); got != tc.lon {
 				t.Errorf("longitude = %s, want %s", got, tc.lon)
+			}
+		})
+	}
+}
+
+// TestMicEMBits tests the message bits of the destination callsign: 1 for
+// a standard one (P-Z), 2 for a custom one (A-K), 0 for a zero (0-9, L).
+// The first packet is from APRS-IS, the second has a mix of standard and
+// custom ones. The expected values are from the Perl module.
+func TestMicEMBits(t *testing.T) {
+	body := ",MEISNR*,WIDE2-1,qAO,N5BTB-2:`2;fl \x1cj/`\"5j}_4"
+	tests := []struct {
+		dst   string
+		mbits string
+		msg   string
+	}{
+		{"EF5RPQ", "220", "Custom 1"},
+		{"AQ5RPQ", "210", "Unknown"},
+		{"SU5RPQ", "110", "En Route"},
+	}
+	for _, tc := range tests {
+		t.Run(tc.dst, func(t *testing.T) {
+			p, err := Parse("TEST-9>" + tc.dst + body)
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if p.MBits != tc.mbits {
+				t.Errorf("mbits = %q, want %q", p.MBits, tc.mbits)
+			}
+			if got := MicEMBitsToMessage(p.MBits); got != tc.msg {
+				t.Errorf("message = %q, want %q", got, tc.msg)
 			}
 		})
 	}
