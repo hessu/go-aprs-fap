@@ -405,3 +405,37 @@ func TestUncompressedLowercaseHemisphere(t *testing.T) {
 		})
 	}
 }
+
+// TestUncompressedInvalidSymbolCode tests that a position is invalid if
+// the symbol code is a space, '|' or '~'. The first packet is from
+// APRS-IS. The expected values are from the Perl module.
+func TestUncompressedInvalidSymbolCode(t *testing.T) {
+	tests := []struct {
+		name    string
+		packet  string
+		wantErr bool
+	}{
+		{name: "space in item", packet: "TEST-10>APBPQ1,TCPIP*,qAC,T2USANW:)NTS-QTC!4531.92N/12258.08W 144.93 Node", wantErr: true},
+		{name: "pipe", packet: "TEST>APRS:!4531.92N/12258.08W|test", wantErr: true},
+		{name: "tilde", packet: "TEST>APRS:!4531.92N/12258.08W~test", wantErr: true},
+		{name: "closing brace", packet: "TEST>APRS:!4531.92N/12258.08W}test"},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			p, err := Parse(tc.packet)
+			if tc.wantErr {
+				if !errors.Is(err, ErrLocInvalid) {
+					t.Fatalf("error = %v, want %v", err, ErrLocInvalid)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("failed to parse: %v", err)
+			}
+			if p.SymbolCode != '}' {
+				t.Errorf("symbolcode = %c, want }", p.SymbolCode)
+			}
+		})
+	}
+}

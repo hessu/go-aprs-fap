@@ -112,8 +112,12 @@ func (p *Packet) parseUncompressedPosition(body string, opt *options) error {
 	}
 	p.Longitude = &lon
 
-	// Symbol code
+	// Symbol code, a printable character other than space, '|' and '~',
+	// which are reserved, as in the Perl module.
 	p.SymbolCode = body[18]
+	if !isValidSymbolCode(p.SymbolCode) {
+		return p.fail(ErrLocInvalid, fmt.Sprintf("invalid symbol code: 0x%02x", p.SymbolCode))
+	}
 
 	// Position resolution based on ambiguity
 	res := posResolution(ambiguity)
@@ -136,6 +140,12 @@ func isCompressedTableChar(c byte) bool {
 // isValidSymbolTable checks if a symbol table character is valid.
 func isValidSymbolTable(c byte) bool {
 	return c == '/' || c == '\\' || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9')
+}
+
+// isValidSymbolCode tells whether c can be a symbol code: a printable
+// character other than space, '|' and '~'.
+func isValidSymbolCode(c byte) bool {
+	return c >= 0x21 && c <= 0x7d && c != '|'
 }
 
 // isPhgBase validates the first 4 characters of PHG data: digit, 0x30-0x7e, digit, digit.
