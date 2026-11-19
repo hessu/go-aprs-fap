@@ -542,7 +542,8 @@ func parseUncompressedLat(s string) (float64, int, error) {
 		return 0, 0, fmt.Errorf("latitude must be 8 characters, got %d", len(s))
 	}
 
-	hemisphere := s[7]
+	// Lowercase hemisphere letters are accepted, as in the Perl module.
+	hemisphere := upperASCII(s[7])
 	if hemisphere != 'N' && hemisphere != 'S' {
 		return 0, 0, fmt.Errorf("invalid hemisphere: %c", hemisphere)
 	}
@@ -571,7 +572,7 @@ func parseUncompressedLon(s string, ambiguity int) (float64, error) {
 		return 0, fmt.Errorf("longitude must be 9 characters, got %d", len(s))
 	}
 
-	hemisphere := s[8]
+	hemisphere := upperASCII(s[8])
 	if hemisphere != 'E' && hemisphere != 'W' {
 		return 0, fmt.Errorf("invalid hemisphere: %c", hemisphere)
 	}
@@ -592,6 +593,14 @@ func parseUncompressedLon(s string, ambiguity int) (float64, error) {
 	}
 
 	return lon, nil
+}
+
+// upperASCII returns the upper case of an ASCII letter, other bytes as is.
+func upperASCII(c byte) byte {
+	if c >= 'a' && c <= 'z' {
+		return c - 'a' + 'A'
+	}
+	return c
 }
 
 // posResolution returns the position resolution in meters for a given ambiguity level.

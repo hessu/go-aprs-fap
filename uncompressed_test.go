@@ -370,3 +370,38 @@ func TestUncompressedAmbiguityCenter(t *testing.T) {
 		})
 	}
 }
+
+// TestUncompressedLowercaseHemisphere tests lowercase hemisphere letters,
+// which the Perl module accepts. The first packet is from APRS-IS. The
+// expected values are from the Perl module.
+func TestUncompressedLowercaseHemisphere(t *testing.T) {
+	tests := []struct {
+		pos string
+		lat string
+		lon string
+	}{
+		{"4909.30n/12201.05w", "49.1550000000", "-122.0175000000"},
+		{"4909.30s/12201.05e", "-49.1550000000", "122.0175000000"},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.pos, func(t *testing.T) {
+			p, err := Parse("TEST-10>APRS,WIDE1-1,WIDE2-1,qAO,VE7PDS:!" + tc.pos + "#fill in digi")
+			if err != nil {
+				t.Fatalf("failed to parse: %v", err)
+			}
+			if got := fmt.Sprintf("%.10f", *p.Latitude); got != tc.lat {
+				t.Errorf("latitude = %s, want %s", got, tc.lat)
+			}
+			if got := fmt.Sprintf("%.10f", *p.Longitude); got != tc.lon {
+				t.Errorf("longitude = %s, want %s", got, tc.lon)
+			}
+			if p.SymbolCode != '#' {
+				t.Errorf("symbolcode = %c, want #", p.SymbolCode)
+			}
+			if p.Comment != "fill in digi" {
+				t.Errorf("comment = %q, want %q", p.Comment, "fill in digi")
+			}
+		})
+	}
+}
