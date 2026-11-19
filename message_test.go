@@ -36,6 +36,9 @@ func TestMessageNormal(t *testing.T) {
 			if p.Message.AckID != "" {
 				t.Errorf("messageack = %q, want empty", p.Message.AckID)
 			}
+			if p.Message.ReplyAck {
+				t.Errorf("replyack = true, want false")
+			}
 		})
 	}
 }
@@ -64,6 +67,9 @@ func TestMessageReplyAckEmpty(t *testing.T) {
 			if p.Message.AckID != "" {
 				t.Errorf("messageack = %q, want empty", p.Message.AckID)
 			}
+			if !p.Message.ReplyAck {
+				t.Errorf("replyack = false, want true")
+			}
 		})
 	}
 }
@@ -91,6 +97,9 @@ func TestMessageReplyAck(t *testing.T) {
 			}
 			if p.Message.AckID != "f001" {
 				t.Errorf("messageack = %q, want %q", p.Message.AckID, "f001")
+			}
+			if !p.Message.ReplyAck {
+				t.Errorf("replyack = false, want true")
 			}
 		})
 	}
@@ -306,6 +315,39 @@ func TestEncodeMessageReplyAck(t *testing.T) {
 				t.Errorf("ackid = %q, want %q", p.Message.AckID, tc.ackID)
 			}
 		})
+	}
+}
+
+// TestEncodeMessageReplyAckSupport tests encoding a message with
+// ReplyAck and no AckID as {ID}, telling that reply-acks are supported.
+func TestEncodeMessageReplyAckSupport(t *testing.T) {
+	msg := &Message{
+		Destination: "N0CALL",
+		Text:        "Testing, 1 2 3",
+		ID:          "42",
+		ReplyAck:    true,
+	}
+	body, err := EncodeMessage(msg)
+	if err != nil {
+		t.Fatalf("EncodeMessage failed: %v", err)
+	}
+	if want := ":N0CALL   :Testing, 1 2 3{42}"; body != want {
+		t.Errorf("body = %q, want %q", body, want)
+	}
+
+	p, err := Parse("OH7AA-1>APRS:" + body)
+	if err != nil {
+		t.Fatalf("failed to parse encoded message: %v", err)
+	}
+	if p.Message.ID != "42" || p.Message.AckID != "" || !p.Message.ReplyAck {
+		t.Errorf("id %q, ackid %q, replyack %v: want 42, empty, true",
+			p.Message.ID, p.Message.AckID, p.Message.ReplyAck)
+	}
+
+	// The ID and '}' must fit in 5 characters
+	msg.ID = "12345"
+	if _, err := EncodeMessage(msg); !errors.Is(err, ErrMsgReplyAck) {
+		t.Errorf("5-character ID: error = %v, want %v", err, ErrMsgReplyAck)
 	}
 }
 

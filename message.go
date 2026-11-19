@@ -46,8 +46,9 @@ func EncodeMessage(msg *Message) (string, error) {
 	default:
 		content = msg.Text
 		if msg.ID != "" {
-			if msg.AckID != "" {
-				// Reply-ack: {ID}ackID — total of ID + '}' + AckID must fit in 5 chars
+			if msg.AckID != "" || msg.ReplyAck {
+				// Reply-ack: {ID}ackID, or {ID} to tell that reply-acks
+				// are supported — total of ID + '}' + AckID must fit in 5 chars
 				if len(msg.ID)+1+len(msg.AckID) > 5 {
 					return "", &ParseError{Code: ErrMsgReplyAck.Code, Msg: "reply-ack too long to embed, send ack separately"}
 				}
@@ -130,10 +131,11 @@ func (p *Packet) parseMessage(opt *options) error {
 	// Separate the message ID {XXXXX, and the reply-ack {XXXXX}YY, from
 	// the text, if they are valid; otherwise it is all message text.
 	msg.Text = msgBody
-	if text, id, ack, ok := splitMessageID(msgBody); ok {
+	if text, id, ack, replyAck, ok := splitMessageID(msgBody); ok {
 		msg.Text = text
 		msg.ID = id
 		msg.AckID = ack
+		msg.ReplyAck = replyAck
 	}
 
 	// Catch telemetry parameter messages (PARM, UNIT, EQNS, BITS)
@@ -175,13 +177,14 @@ func ackRejID(text, prefix string) (string, bool) {
 
 // splitMessageID splits a message into the text, the message ID and the
 // reply-ack ID, if it ends with a valid message ID: '{' and 1-5 ID
-// characters, optionally followed by '}' and a reply-ack ID of 1-5 ID
+// characters, optionally followed by '}' and a reply-ack ID of 0-5 ID
 // characters, and trailing white space. The text must not contain a '{'.
+// replyAck tells whether the '}' of the reply-ack format is there.
 // This is the Perl module's /^([^{]*)\{([A-Za-z0-9]{1,5})(}[A-Za-z0-9]{1,5}|\}|)\s*$/.
-func splitMessageID(body string) (text, id, ack string, ok bool) {
+func splitMessageID(body string) (text, id, ack string, replyAck, ok bool) {
 	idx := strings.IndexByte(body, '{')
 	if idx < 0 {
-		return "", "", "", false
+		return "", "", "", false, false
 	}
 	rest := trimTrailingSpace(body[idx+1:])
 
@@ -190,26 +193,27 @@ func splitMessageID(body string) (text, id, ack string, ok bool) {
 		n++
 	}
 	if n < 1 || n > 5 {
-		return "", "", "", false
+		return "", "", "", false, false
 	}
 	id, rest = rest[:n], rest[n:]
 
 	if rest != "" {
 		if rest[0] != '}' {
-			return "", "", "", false
+			return "", "", "", false, false
 		}
+		replyAck = true
 		ack = rest[1:]
 		if len(ack) > 5 {
-			return "", "", "", false
+			return "", "", "", false, false
 		}
 		for i := 0; i < len(ack); i++ {
 			if !isMsgIDChar(ack[i]) {
-				return "", "", "", false
+				return "", "", "", false, false
 			}
 		}
 	}
 
-	return body[:idx], id, ack, true
+	return body[:idx], id, ack, replyAck, true
 }
 
 // isTelemetryMessage checks if a message body starts with a telemetry

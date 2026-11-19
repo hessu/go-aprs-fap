@@ -91,6 +91,11 @@ type Message struct {
 	ID          string // Message ID
 	AckID       string // Message acknowledgment ID
 	RejID       string // Message reject ID
+
+	// ReplyAck is true if the message ID is in the reply-ack format
+	// {ID}, with or without an AckID: the sender supports reply-acks,
+	// and expects the ack of this message in the reply-ack format too.
+	ReplyAck bool
 }
 
 // Packet represents a parsed APRS packet.

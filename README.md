@@ -343,7 +343,10 @@ if err != nil {
 ```
 
 It supports all message variants: regular messages, acks, rejects, and
-reply-acks. Validation is performed on all fields:
+reply-acks. A message with `ReplyAck` set and no `AckID` is encoded as
+`{ID}`, telling that the sender supports reply-acks; the parser sets
+`ReplyAck` on messages in the reply-ack format. Validation is performed
+on all fields:
 
 | Sentinel | Condition |
 |---|---|
