@@ -71,8 +71,7 @@ func isValidMsgID(id string) bool {
 		return false
 	}
 	for i := 0; i < len(id); i++ {
-		c := id[i]
-		if !((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9')) {
+		if !isMsgIDChar(id[i]) {
 			return false
 		}
 	}
@@ -101,32 +100,24 @@ func (p *Packet) parseMessage(opt *options) error {
 	msg.Destination = strings.TrimSpace(body[:9])
 	msgBody := body[10:]
 
-	// Check for ack
-	if strings.HasPrefix(msgBody, "ack") {
-		msg.AckID = msgBody[3:]
+	// Check for ack and rej. Trailing spaces are allowed because some
+	// broken software inserts them. Otherwise "ack" is message text.
+	if id, ok := ackRejID(msgBody, "ack"); ok {
+		msg.AckID = id
+		return nil
+	}
+	if id, ok := ackRejID(msgBody, "rej"); ok {
+		msg.RejID = id
 		return nil
 	}
 
-	// Check for rej
-	if strings.HasPrefix(msgBody, "rej") {
-		msg.RejID = msgBody[3:]
-		return nil
-	}
-
-	// Look for message ID: {XXXXX
-	if idx := strings.LastIndexByte(msgBody, '{'); idx >= 0 {
-		msg.Text = msgBody[:idx]
-		idPart := msgBody[idx+1:]
-
-		// Check for reply-ack: {XXXXX}YY
-		if ridx := strings.IndexByte(idPart, '}'); ridx >= 0 {
-			msg.ID = idPart[:ridx]
-			msg.AckID = idPart[ridx+1:]
-		} else {
-			msg.ID = idPart
-		}
-	} else {
-		msg.Text = msgBody
+	// Separate the message ID {XXXXX, and the reply-ack {XXXXX}YY, from
+	// the text, if they are valid; otherwise it is all message text.
+	msg.Text = msgBody
+	if text, id, ack, ok := splitMessageID(msgBody); ok {
+		msg.Text = text
+		msg.ID = id
+		msg.AckID = ack
 	}
 
 	// Catch telemetry parameter messages (PARM, UNIT, EQNS, BITS)
@@ -135,6 +126,74 @@ func (p *Packet) parseMessage(opt *options) error {
 	}
 
 	return nil
+}
+
+// trimTrailingSpace removes trailing white space, like \s+$ in Perl.
+func trimTrailingSpace(s string) string {
+	return strings.TrimRight(s, " \t\r\n\f\v")
+}
+
+// isMsgIDChar tells whether c can be in a message ID.
+func isMsgIDChar(c byte) bool {
+	return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9')
+}
+
+// ackRejID returns the message ID of an ack or a reject, if the message
+// text is the prefix ("ack" or "rej") followed by 1-5 ID characters (or
+// '}', which some software includes) and optional trailing white space.
+func ackRejID(text, prefix string) (string, bool) {
+	if !strings.HasPrefix(text, prefix) {
+		return "", false
+	}
+	id := trimTrailingSpace(text[len(prefix):])
+	if len(id) < 1 || len(id) > 5 {
+		return "", false
+	}
+	for i := 0; i < len(id); i++ {
+		if !isMsgIDChar(id[i]) && id[i] != '}' {
+			return "", false
+		}
+	}
+	return id, true
+}
+
+// splitMessageID splits a message into the text, the message ID and the
+// reply-ack ID, if it ends with a valid message ID: '{' and 1-5 ID
+// characters, optionally followed by '}' and a reply-ack ID of 1-5 ID
+// characters, and trailing white space. The text must not contain a '{'.
+// This is the Perl module's /^([^{]*)\{([A-Za-z0-9]{1,5})(}[A-Za-z0-9]{1,5}|\}|)\s*$/.
+func splitMessageID(body string) (text, id, ack string, ok bool) {
+	idx := strings.IndexByte(body, '{')
+	if idx < 0 {
+		return "", "", "", false
+	}
+	rest := trimTrailingSpace(body[idx+1:])
+
+	n := 0
+	for n < len(rest) && n < 6 && isMsgIDChar(rest[n]) {
+		n++
+	}
+	if n < 1 || n > 5 {
+		return "", "", "", false
+	}
+	id, rest = rest[:n], rest[n:]
+
+	if rest != "" {
+		if rest[0] != '}' {
+			return "", "", "", false
+		}
+		ack = rest[1:]
+		if len(ack) > 5 {
+			return "", "", "", false
+		}
+		for i := 0; i < len(ack); i++ {
+			if !isMsgIDChar(ack[i]) {
+				return "", "", "", false
+			}
+		}
+	}
+
+	return body[:idx], id, ack, true
 }
 
 // isTelemetryMessage checks if a message body starts with a telemetry

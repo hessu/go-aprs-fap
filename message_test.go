@@ -451,3 +451,99 @@ func TestMessageErrors(t *testing.T) {
 		})
 	}
 }
+
+// TestMessageIDFormat tests that the message ID, ack and reject IDs are
+// only separated from the message text if they are valid: 1-5 letters
+// or digits, after the only '{' of the message. Otherwise it is all
+// message text. The first two packets are from APRS-IS. The expected
+// values are from the Perl module.
+func TestMessageIDFormat(t *testing.T) {
+	tests := []struct {
+		name   string
+		packet string
+		dst    string
+		text   string
+		id     string
+		ack    string
+		rej    string
+	}{
+		{
+			name:   "braces in text",
+			packet: "TEST-13>APRS,TCPIP*,qAC,T2QUEBEC::TEST-13  :IPINFO={'pub'='192.0.2.8','priv'='192.168.16.39/24'}",
+			dst:    "TEST-13",
+			text:   "IPINFO={'pub'='192.0.2.8','priv'='192.168.16.39/24'}",
+		},
+		{
+			name:   "binary text",
+			packet: "TEST-1>APCLUB,WIDE1-1,WIDE2-1,qAR,ON4MAX-2::CLUBCHAT :[MLY4 5/6] EiVjx0{JPD2+}&j>^7~c35",
+			dst:    "CLUBCHAT",
+			text:   "[MLY4 5/6] EiVjx0{JPD2+}&j>^7~c35",
+		},
+		{
+			name:   "ack without id",
+			packet: "TEST>APZ500,WIDE3-1,qAR,KE4PMP-1::N0CALL   :ack",
+			dst:    "N0CALL",
+			text:   "ack",
+		},
+		{
+			name:   "ack with trailing space",
+			packet: "TEST>APRS::N0CALL   :ack12 ",
+			dst:    "N0CALL",
+			ack:    "12",
+		},
+		{
+			name:   "rej with brace",
+			packet: "TEST>APRS::N0CALL   :rej1}",
+			dst:    "N0CALL",
+			rej:    "1}",
+		},
+		{
+			name:   "reply-ack",
+			packet: "TEST>APRS::N0CALL   :Hello{AB}CD",
+			dst:    "N0CALL",
+			text:   "Hello",
+			id:     "AB",
+			ack:    "CD",
+		},
+		{
+			name:   "id too long",
+			packet: "TEST>APRS::N0CALL   :Hello{ABCDEF",
+			dst:    "N0CALL",
+			text:   "Hello{ABCDEF",
+		},
+		{
+			name:   "two braces",
+			packet: "TEST>APRS::N0CALL   :Hi {there} {1",
+			dst:    "N0CALL",
+			text:   "Hi {there} {1",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			p, err := Parse(tc.packet)
+			if err != nil {
+				t.Fatalf("failed to parse: %v", err)
+			}
+			m := p.Message
+			if m == nil {
+				t.Fatal("message is nil")
+			}
+			if m.Destination != tc.dst {
+				t.Errorf("destination = %q, want %q", m.Destination, tc.dst)
+			}
+			if m.Text != tc.text {
+				t.Errorf("message = %q, want %q", m.Text, tc.text)
+			}
+			if m.ID != tc.id {
+				t.Errorf("messageid = %q, want %q", m.ID, tc.id)
+			}
+			if m.AckID != tc.ack {
+				t.Errorf("messageack = %q, want %q", m.AckID, tc.ack)
+			}
+			if m.RejID != tc.rej {
+				t.Errorf("messagerej = %q, want %q", m.RejID, tc.rej)
+			}
+		})
+	}
+}
