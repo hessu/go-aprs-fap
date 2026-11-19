@@ -740,3 +740,24 @@ func TestWxSnowfallAfterWind(t *testing.T) {
 		})
 	}
 }
+
+// TestWxUppercaseSNotSnowfall tests that an uppercase 'S' in the comment
+// of a weather report is not taken as snowfall. The packet is from
+// APRS-IS; the Perl module finds no weather data in it.
+func TestWxUppercaseSNotSnowfall(t *testing.T) {
+	packet := "S57D-6>APMI04,TCPIP*,qAS,S57D:@010000z4606.02N/01433.47E_S57D WX Station Nadgorica U=13.4V."
+
+	p, err := Parse(packet)
+	if err != nil {
+		t.Fatalf("failed to parse: %v", err)
+	}
+	if p.Wx != nil && p.Wx.Snow24h != nil {
+		t.Errorf("snow24h = %v, want nil", *p.Wx.Snow24h)
+	}
+	if p.Wx != nil && p.Wx.hasData() {
+		t.Errorf("wx has data: %+v", p.Wx)
+	}
+	if p.Comment != "" {
+		t.Errorf("comment = %q, want empty", p.Comment)
+	}
+}

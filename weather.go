@@ -82,16 +82,8 @@ func parseWeatherFields(data string, wx *Weather) {
 		}
 
 		consumed := 0
-		field := data[i]
 
-		// 's' is the wind speed after the wind direction 'c' at the
-		// start of a positionless report, and snowfall elsewhere, like
-		// after the wind of a position report.
-		if field == 's' && prev != 'c' {
-			field = 'S'
-		}
-
-		switch field {
+		switch data[i] {
 		case 'c': // Wind direction (degrees)
 			if val, n := parseWxInt(data[i+1:], 3); n > 0 {
 				v := float64(val)
@@ -100,13 +92,28 @@ func parseWeatherFields(data string, wx *Weather) {
 			} else if n := skipWxField(data[i+1:]); n > 0 {
 				consumed = 1 + n
 			}
-		case 's': // Wind speed (mph, convert to m/s)
-			if val, n := parseWxInt(data[i+1:], 3); n > 0 {
-				v := float64(val) * 0.44704
-				wx.WindSpeed = &v
-				consumed = 1 + n
-			} else if n := skipWxField(data[i+1:]); n > 0 {
-				consumed = 1 + n
+		case 's':
+			// 's' is the wind speed after the wind direction 'c' at the
+			// start of a positionless report, and snowfall elsewhere,
+			// like after the wind of a position report.
+			if prev == 'c' {
+				// Wind speed (mph, convert to m/s)
+				if val, n := parseWxInt(data[i+1:], 3); n > 0 {
+					v := float64(val) * 0.44704
+					wx.WindSpeed = &v
+					consumed = 1 + n
+				} else if n := skipWxField(data[i+1:]); n > 0 {
+					consumed = 1 + n
+				}
+			} else {
+				// Snowfall (hundredths of inches, convert to mm)
+				if val, n := parseWxInt(data[i+1:], 3); n > 0 {
+					v := float64(val) * 0.254
+					wx.Snow24h = &v
+					consumed = 1 + n
+				} else if n := skipWxField(data[i+1:]); n > 0 {
+					consumed = 1 + n
+				}
 			}
 		case 'g': // Wind gust (mph, convert to m/s)
 			if val, n := parseWxInt(data[i+1:], 3); n > 0 {
@@ -174,14 +181,6 @@ func parseWeatherFields(data string, wx *Weather) {
 					val += 1000
 				}
 				wx.Luminosity = &val
-				consumed = 1 + n
-			} else if n := skipWxField(data[i+1:]); n > 0 {
-				consumed = 1 + n
-			}
-		case 'S': // Snowfall, 's' not after 'c' (hundredths of inches, convert to mm)
-			if val, n := parseWxInt(data[i+1:], 3); n > 0 {
-				v := float64(val) * 0.254 // hundredths of inch to mm
-				wx.Snow24h = &v
 				consumed = 1 + n
 			} else if n := skipWxField(data[i+1:]); n > 0 {
 				consumed = 1 + n
