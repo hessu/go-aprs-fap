@@ -547,3 +547,44 @@ func TestMessageIDFormat(t *testing.T) {
 		})
 	}
 }
+
+// TestMessageInvalidCharacters tests that a message is invalid if the
+// addressee has other characters than letters, digits, '_', '-' and
+// spaces, or the message has control characters or 0xff. The first
+// packet is from APRS-IS. The expected values are from the Perl module.
+func TestMessageInvalidCharacters(t *testing.T) {
+	tests := []struct {
+		name    string
+		packet  string
+		wantErr bool
+		dst     string
+		text    string
+	}{
+		{name: "addressee", packet: "TEST>APPRPV,TCPIP*,qAC,T2CSNGRAD::BLN2) WI :2) WINLINK", wantErr: true},
+		{name: "control character", packet: "TEST>APRS::N0CALL   :Hello\x01", wantErr: true},
+		{name: "0xff", packet: "TEST>APRS::N0CALL   :Hello\xff", wantErr: true},
+		{name: "0xfe", packet: "TEST>APRS::N0CALL   :Hello\xfe", dst: "N0CALL", text: "Hello\xfe"},
+		{name: "leading space", packet: "TEST>APRS:: N0CALL  :Hi", dst: " N0CALL", text: "Hi"},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			p, err := Parse(tc.packet)
+			if tc.wantErr {
+				if !errors.Is(err, ErrMsgInvalid) {
+					t.Fatalf("error = %v, want %v", err, ErrMsgInvalid)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("failed to parse: %v", err)
+			}
+			if p.Message.Destination != tc.dst {
+				t.Errorf("destination = %q, want %q", p.Message.Destination, tc.dst)
+			}
+			if p.Message.Text != tc.text {
+				t.Errorf("message = %q, want %q", p.Message.Text, tc.text)
+			}
+		})
+	}
+}

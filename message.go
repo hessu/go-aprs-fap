@@ -1,6 +1,7 @@
 package fap
 
 import (
+	"fmt"
 	"strings"
 )
 
@@ -94,11 +95,26 @@ func (p *Packet) parseMessage(opt *options) error {
 		return p.fail(ErrMsgInvalid, "message addressee field malformed")
 	}
 
+	// Like the Perl module, the addressee may only have letters, digits,
+	// '_', '-' and spaces, and the message may not have control
+	// characters or 0xff.
+	for i := 0; i < 9; i++ {
+		c := body[i]
+		if !isMsgIDChar(c) && c != '_' && c != '-' && c != ' ' {
+			return p.fail(ErrMsgInvalid, fmt.Sprintf("invalid character in message addressee: 0x%02x", c))
+		}
+	}
+	msgBody := body[10:]
+	for i := 0; i < len(msgBody); i++ {
+		if c := msgBody[i]; c < 0x20 || c == 0x7f || c == 0xff {
+			return p.fail(ErrMsgInvalid, fmt.Sprintf("invalid character in message: 0x%02x", c))
+		}
+	}
+
 	msg := &Message{}
 	p.Message = msg
 
-	msg.Destination = strings.TrimSpace(body[:9])
-	msgBody := body[10:]
+	msg.Destination = strings.TrimRight(body[:9], " ")
 
 	// Check for ack and rej. Trailing spaces are allowed because some
 	// broken software inserts them. Otherwise "ack" is message text.
