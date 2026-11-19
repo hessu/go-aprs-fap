@@ -394,3 +394,58 @@ func TestMicEMBitsToMessage(t *testing.T) {
 		}
 	}
 }
+
+// TestMicEPosAmbiguity tests position ambiguity, set by the characters K,
+// L and Z in the destination callsign. The packet is from APRS-IS, the
+// variants have more of the latitude digits masked out. The expected
+// values are from the Perl module.
+func TestMicEPosAmbiguity(t *testing.T) {
+	body := ":`32Ol!fU/`\"4K}Keep Exploring!_$"
+	tests := []struct {
+		dst     string
+		amb     int
+		res     string
+		lat     string
+		lon     string
+		wantErr error
+	}{
+		{dst: "T8RTWZ", amb: 1, res: "185.2", lat: "48.4125000000", lon: "-123.3758333333"},
+		{dst: "T8RTZZ", amb: 2, res: "1852.0", lat: "48.4083333333", lon: "-123.3750000000"},
+		{dst: "T8RZZZ", amb: 3, res: "18520.0", lat: "48.4166666667", lon: "-123.4166666667"},
+		{dst: "T8ZZZZ", amb: 4, res: "111120.0", lat: "48.5000000000", lon: "-123.5000000000"},
+		{dst: "TZZZZZ", wantErr: ErrMiceAmbLarge},
+		{dst: "T8RZWZ", wantErr: ErrMiceAmbInv},
+		{dst: "ZZZZZZ", wantErr: ErrMiceAmbInv},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.dst, func(t *testing.T) {
+			packet := "TEST-9>" + tc.dst + ",WIDE1-1,WIDE2-1,qAR,VE7VIC-4" + body
+			p, err := Parse(packet)
+			if tc.wantErr != nil {
+				if !errors.Is(err, tc.wantErr) {
+					t.Fatalf("error = %v, want %v", err, tc.wantErr)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if p.PosAmbiguity == nil || *p.PosAmbiguity != tc.amb {
+				t.Errorf("posambiguity = %v, want %d", p.PosAmbiguity, tc.amb)
+			}
+			if p.PosResolution == nil {
+				t.Fatal("posresolution is nil")
+			}
+			if got := fmt.Sprintf("%.1f", *p.PosResolution); got != tc.res {
+				t.Errorf("posresolution = %s, want %s", got, tc.res)
+			}
+			if got := fmt.Sprintf("%.10f", *p.Latitude); got != tc.lat {
+				t.Errorf("latitude = %s, want %s", got, tc.lat)
+			}
+			if got := fmt.Sprintf("%.10f", *p.Longitude); got != tc.lon {
+				t.Errorf("longitude = %s, want %s", got, tc.lon)
+			}
+		})
+	}
+}

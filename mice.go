@@ -52,6 +52,139 @@ var micEDestTable = map[byte]micEDestInfo{
 	'Z': {0, 1, true, false},
 }
 
+// micEDest is the data encoded in a Mic-E destination callsign.
+type micEDest struct {
+	lat       float64 // latitude, with ambiguity applied
+	amb       int     // position ambiguity, 0-4
+	mbits     string  // message bits
+	lonOffset int     // longitude offset, 0 or 100 degrees
+	isWest    bool
+}
+
+// decodeMicEDest decodes the latitude, position ambiguity, message bits
+// and longitude offset and direction from a Mic-E destination callsign
+// without SSID. The characters K, L and Z are spaces, which mask out
+// the last digits of the latitude for position ambiguity. The masked
+// digits must be the last ones, and only the minutes can be masked. The
+// latitude is the middle of the ambiguous area: the first masked digit
+// is 5 (3 if the whole minutes are masked), the rest 0.
+func (p *Packet) decodeMicEDest(dst string) (*micEDest, error) {
+	d := &micEDest{}
+	var digits [6]byte
+	var msgBuf [3]byte
+	isNorth := false
+
+	for i := range 6 {
+		info, ok := micEDestTable[dst[i]]
+		if !ok {
+			return nil, p.fail(ErrMiceInvDstCall, fmt.Sprintf("invalid Mic-E destination character: %c", dst[i]))
+		}
+
+		if dst[i] == 'K' || dst[i] == 'L' || dst[i] == 'Z' {
+			digits[i] = '_'
+			d.amb++
+		} else {
+			if d.amb > 0 {
+				return nil, p.fail(ErrMiceAmbInv, "Mic-E position ambiguity digits are not the last ones")
+			}
+			digits[i] = '0' + byte(info.digit)
+		}
+
+		if i < 3 {
+			msgBuf[i] = '0' + byte(info.msgBit)
+		}
+		if i == 3 && info.isNorth {
+			isNorth = true
+		}
+		if i == 4 && dst[i] >= 'P' && dst[i] <= 'Z' {
+			// Longitude offset: if the character is P-Z, add 100 degrees
+			d.lonOffset = 100
+		}
+		if i == 5 && dst[i] >= 'P' && dst[i] <= 'Z' {
+			d.isWest = true
+		}
+	}
+
+	if d.amb == 6 {
+		return nil, p.fail(ErrMiceAmbInv, "Mic-E latitude has no digits")
+	}
+	if d.amb > 4 {
+		return nil, p.fail(ErrMiceAmbLarge, fmt.Sprintf("too much Mic-E position ambiguity: %d", d.amb))
+	}
+
+	// Use the middle of the ambiguous area
+	for i := 6 - d.amb; i < 6; i++ {
+		switch {
+		case i > 6-d.amb:
+			digits[i] = '0'
+		case d.amb >= 4:
+			digits[i] = '3'
+		default:
+			digits[i] = '5'
+		}
+	}
+
+	n := func(i int) float64 { return float64(digits[i] - '0') }
+	d.lat = n(0)*10 + n(1) + (n(2)*10+n(3)+(n(4)*10+n(5))/100.0)/60.0
+	if !isNorth {
+		d.lat = -d.lat
+	}
+	d.mbits = string(msgBuf[:])
+
+	return d, nil
+}
+
+// setMicEPosition sets the position, ambiguity and message bits of a
+// Mic-E packet from the decoded destination callsign and the longitude
+// in the first 3 bytes of the information field. The position ambiguity
+// of the latitude also applies to the longitude: the masked digits of
+// the longitude minutes are replaced with the middle of the area.
+func (p *Packet) setMicEPosition(d *micEDest, body string) {
+	p.MBits = d.mbits
+
+	lat := d.lat
+	p.Latitude = &lat
+	amb := d.amb
+	p.PosAmbiguity = &amb
+	res := posResolution(amb)
+	p.PosResolution = &res
+
+	lonDeg := int(body[0]) - 28 + d.lonOffset
+	if lonDeg >= 180 && lonDeg <= 189 {
+		lonDeg -= 80
+	} else if lonDeg >= 190 && lonDeg <= 199 {
+		lonDeg -= 190
+	}
+
+	lonMin := int(body[1]) - 28
+	if lonMin >= 60 {
+		lonMin -= 60
+	}
+
+	lonHMin := int(body[2]) - 28
+
+	var min float64
+	switch amb {
+	case 4:
+		// minutes unused, middle of the degree
+		min = 30
+	case 3:
+		min = float64(lonMin/10*10) + 5
+	case 2:
+		min = float64(lonMin) + 0.5
+	case 1:
+		min = float64(lonMin) + float64(lonHMin/10)/10 + 0.05
+	default:
+		min = float64(lonMin) + float64(lonHMin)/100.0
+	}
+
+	lon := float64(lonDeg) + min/60.0
+	if d.isWest {
+		lon = -lon
+	}
+	p.Longitude = &lon
+}
+
 // parseMicE parses a Mic-E encoded packet.
 func (p *Packet) parseMicE(opt *options) error {
 	p.Type = PacketTypeLocation
@@ -74,79 +207,13 @@ func (p *Packet) parseMicE(opt *options) error {
 	}
 
 	// Decode latitude from destination callsign
-	latDigits := make([]int, 6)
-	var msgBuf [3]byte
-	isNorth := false
-	lonOffset := 0
-	isWest := false
-
-	for i := range 6 {
-		info, ok := micEDestTable[dst[i]]
-		if !ok {
-			return p.fail(ErrMiceInvDstCall, fmt.Sprintf("invalid Mic-E destination character: %c", dst[i]))
-		}
-		latDigits[i] = info.digit
-
-		if i < 3 {
-			msgBuf[i] = '0' + byte(info.msgBit)
-		}
-		if i == 3 && info.isNorth {
-			isNorth = true
-		}
-		if i == 4 {
-			// Longitude offset: if the character is P-Z, add 100 degrees
-			if dst[i] >= 'P' && dst[i] <= 'Z' {
-				lonOffset = 100
-			}
-		}
-		if i == 5 {
-			// West indicator
-			if dst[i] >= 'P' && dst[i] <= 'Z' {
-				isWest = true
-			}
-		}
+	d, err := p.decodeMicEDest(dst)
+	if err != nil {
+		return err
 	}
-
-	msgBits := string(msgBuf[:])
-	p.MBits = msgBits
-
-	// Build latitude
-	latDeg := float64(latDigits[0]*10 + latDigits[1])
-	latMin := float64(latDigits[2]*10+latDigits[3]) + float64(latDigits[4]*10+latDigits[5])/100.0
-	lat := latDeg + latMin/60.0
-
-	if !isNorth {
-		lat = -lat
-	}
-
-	p.Latitude = &lat
-	amb := 0
-	p.PosAmbiguity = &amb
-	res := posResolution(0)
-	p.PosResolution = &res
 
 	// Decode longitude from information field
-	lonDeg := int(body[0]) - 28 + lonOffset
-	if lonDeg >= 180 && lonDeg <= 189 {
-		lonDeg -= 80
-	} else if lonDeg >= 190 && lonDeg <= 199 {
-		lonDeg -= 190
-	}
-
-	lonMin := int(body[1]) - 28
-	if lonMin >= 60 {
-		lonMin -= 60
-	}
-
-	lonHMin := int(body[2]) - 28
-
-	lon := float64(lonDeg) + (float64(lonMin)+float64(lonHMin)/100.0)/60.0
-
-	if isWest {
-		lon = -lon
-	}
-
-	p.Longitude = &lon
+	p.setMicEPosition(d, body)
 
 	// Speed and course from bytes 3-5
 	sp := int(body[3]) - 28
@@ -333,64 +400,11 @@ func (p *Packet) parseMicEMangled(opt *options) error {
 	p.Format = FormatMicE
 
 	// Decode latitude from destination (same as normal)
-	latDigits := make([]int, 6)
-	var msgBuf2 [3]byte
-	isNorth := false
-	lonOffset := 0
-	isWest := false
-
-	for i := range 6 {
-		info, ok := micEDestTable[dst[i]]
-		if !ok {
-			return p.fail(ErrMiceInvDstCall, "invalid Mic-E destination character")
-		}
-		latDigits[i] = info.digit
-		if i < 3 {
-			msgBuf2[i] = '0' + byte(info.msgBit)
-		}
-		if i == 3 && info.isNorth {
-			isNorth = true
-		}
-		if i == 4 && dst[i] >= 'P' && dst[i] <= 'Z' {
-			lonOffset = 100
-		}
-		if i == 5 && dst[i] >= 'P' && dst[i] <= 'Z' {
-			isWest = true
-		}
+	d, err := p.decodeMicEDest(dst)
+	if err != nil {
+		return err
 	}
-
-	p.MBits = string(msgBuf2[:])
-
-	latDeg := float64(latDigits[0]*10 + latDigits[1])
-	latMin := float64(latDigits[2]*10+latDigits[3]) + float64(latDigits[4]*10+latDigits[5])/100.0
-	lat := latDeg + latMin/60.0
-	if !isNorth {
-		lat = -lat
-	}
-	p.Latitude = &lat
-	amb := 0
-	p.PosAmbiguity = &amb
-	res := posResolution(0)
-	p.PosResolution = &res
-
-	lonDeg := int(body[0]) - 28 + lonOffset
-	if lonDeg >= 180 && lonDeg <= 189 {
-		lonDeg -= 80
-	} else if lonDeg >= 190 && lonDeg <= 199 {
-		lonDeg -= 190
-	}
-
-	lonMin := int(body[1]) - 28
-	if lonMin >= 60 {
-		lonMin -= 60
-	}
-
-	lonHMin := int(body[2]) - 28
-	lon := float64(lonDeg) + (float64(lonMin)+float64(lonHMin)/100.0)/60.0
-	if isWest {
-		lon = -lon
-	}
-	p.Longitude = &lon
+	p.setMicEPosition(d, body)
 
 	// Skip speed/course — unreliable in mangled packets
 	// Symbol code and table from the restored 8-byte layout

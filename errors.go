@@ -62,6 +62,8 @@ var (
 	ErrMiceShort        = &ParseError{Code: "mice_short"}
 	ErrMiceInvDstCall   = &ParseError{Code: "mice_inv_dstcall"}
 	ErrMiceInvInfoField = &ParseError{Code: "mice_inv_infofield"}
+	ErrMiceAmbLarge     = &ParseError{Code: "mice_amb_large"}
+	ErrMiceAmbInv       = &ParseError{Code: "mice_amb_inv"}
 
 	// Object/item errors
 	ErrObjShort    = &ParseError{Code: "obj_short"}
