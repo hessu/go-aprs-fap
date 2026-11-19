@@ -761,3 +761,73 @@ func TestWxUppercaseSNotSnowfall(t *testing.T) {
 		t.Errorf("comment = %q, want empty", p.Comment)
 	}
 }
+
+// TestWxMalformedValue tests that a weather field with a malformed value,
+// a negative number in an unsigned field, is skipped and left in the
+// comment, and the fields after it are parsed. The packets are from
+// APRS-IS, the expected values are from the Perl module.
+func TestWxMalformedValue(t *testing.T) {
+	tests := []struct {
+		name     string
+		packet   string
+		temp     string
+		humidity string
+		pressure string
+		comment  string
+	}{
+		{
+			name:     "luminosity",
+			packet:   "DP0GVN-13>APRS,TCPIP*,qAS,DP0GVN:!7040.12S/00816.71W_084/012g...t005L-00h86b09613WX Neumayer III",
+			temp:     "-15.0",
+			humidity: "86",
+			pressure: "961.3",
+			comment:  "L-00WX Neumayer III",
+		},
+		{
+			name:     "pressure",
+			packet:   "TEST-15>APRS,WIDE1-1,qAR,SK3W-10:=6000.88N/01626.37E_.../...g...t360h100b-976Batt=93%",
+			temp:     "182.2",
+			humidity: "100",
+			comment:  "b-976Batt=93%",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			p, err := Parse(tc.packet)
+			if err != nil {
+				t.Fatalf("failed to parse: %v", err)
+			}
+			if p.Wx == nil {
+				t.Fatal("wx is nil")
+			}
+			got := ""
+			if p.Wx.Temp != nil {
+				got = fmt.Sprintf("%.1f", *p.Wx.Temp)
+			}
+			if got != tc.temp {
+				t.Errorf("temp = %q, want %q", got, tc.temp)
+			}
+			got = ""
+			if p.Wx.Humidity != nil {
+				got = fmt.Sprintf("%d", *p.Wx.Humidity)
+			}
+			if got != tc.humidity {
+				t.Errorf("humidity = %q, want %q", got, tc.humidity)
+			}
+			got = ""
+			if p.Wx.Pressure != nil {
+				got = fmt.Sprintf("%.1f", *p.Wx.Pressure)
+			}
+			if got != tc.pressure {
+				t.Errorf("pressure = %q, want %q", got, tc.pressure)
+			}
+			if p.Wx.Luminosity != nil {
+				t.Errorf("luminosity = %d, want nil", *p.Wx.Luminosity)
+			}
+			if p.Comment != tc.comment {
+				t.Errorf("comment = %q, want %q", p.Comment, tc.comment)
+			}
+		})
+	}
+}

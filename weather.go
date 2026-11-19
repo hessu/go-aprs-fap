@@ -76,6 +76,22 @@ func parseWeatherFromComment(comment string, wx *Weather) string {
 func parseWeatherFields(data string, wx *Weather) {
 	i := 0
 	var prev byte // the previous field
+
+	// unparsed collects the fields with a malformed value, which are
+	// skipped and left in the comment, like in the Perl module.
+	unparsed := ""
+
+	// finish stores the text which is not weather data as the software
+	// ID or the comment.
+	finish := func(rest string) {
+		remaining := strings.TrimSpace(unparsed + rest)
+		if isSoftwareID(remaining) {
+			wx.Software = remaining
+		} else {
+			wx.commentAfterWx = remaining
+		}
+	}
+
 	for i < len(data) {
 		if i+1 >= len(data) {
 			break
@@ -231,20 +247,54 @@ func parseWeatherFields(data string, wx *Weather) {
 			}
 		}
 
+		if consumed == 0 && isWxFieldID(data[i]) {
+			// A weather field with a malformed value, like "L-00":
+			// skip it, leaving it in the comment, and parse the fields
+			// after it.
+			if n := malformedWxValue(data[i+1:]); n > 0 {
+				unparsed += data[i : i+1+n]
+				prev = data[i]
+				i += 1 + n
+				continue
+			}
+		}
+
 		if consumed > 0 {
 			i += consumed
 			prev = data[i-consumed]
 		} else {
 			// Not a recognized weather field - remaining text is comment or software ID
-			remaining := strings.TrimSpace(data[i:])
-			if isSoftwareID(remaining) {
-				wx.Software = remaining
-			} else {
-				wx.commentAfterWx = remaining
-			}
+			finish(data[i:])
 			return
 		}
 	}
+
+	if unparsed != "" {
+		finish("")
+	}
+}
+
+// isWxFieldID tells whether c is the identifier of a weather field
+// parsed by parseWeatherFields.
+func isWxFieldID(c byte) bool {
+	return strings.IndexByte("csgtrpPhbLlFXV#", c) >= 0
+}
+
+// malformedWxValue returns the length of a malformed weather value at
+// the start of s: a minus sign and digits, which is not valid for the
+// unsigned fields. Returns 0 if there is none.
+func malformedWxValue(s string) int {
+	if len(s) < 2 || s[0] != '-' {
+		return 0
+	}
+	n := 1
+	for n < len(s) && s[n] >= '0' && s[n] <= '9' {
+		n++
+	}
+	if n == 1 {
+		return 0
+	}
+	return n
 }
 
 // isSoftwareID checks if a string looks like a weather station software identifier
