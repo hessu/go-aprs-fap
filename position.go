@@ -142,6 +142,32 @@ func isValidSymbolTable(c byte) bool {
 	return c == '/' || c == '\\' || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9')
 }
 
+// validCompressedPosition checks the characters of the 13 bytes of a
+// compressed position, like the Perl module: the symbol table /, \, A-Z
+// or a-j, 8 base-91 digits of the position (! to {), the symbol code,
+// and the course/speed or altitude or range and the compression type
+// (space to {). Returns a description of the problem, or "" if it is
+// valid.
+func validCompressedPosition(b string) string {
+	if t := b[0]; t != '/' && t != '\\' && !(t >= 'A' && t <= 'Z') && !(t >= 'a' && t <= 'j') {
+		return fmt.Sprintf("invalid symbol table: 0x%02x", t)
+	}
+	for i := 1; i <= 8; i++ {
+		if b[i] < 0x21 || b[i] > 0x7b {
+			return fmt.Sprintf("invalid base-91 position character: 0x%02x", b[i])
+		}
+	}
+	if c := b[9]; !isValidSymbolCode(c) {
+		return fmt.Sprintf("invalid symbol code: 0x%02x", c)
+	}
+	for i := 10; i <= 12; i++ {
+		if b[i] < 0x20 || b[i] > 0x7b {
+			return fmt.Sprintf("invalid compressed course/speed or type character: 0x%02x", b[i])
+		}
+	}
+	return ""
+}
+
 // isValidSymbolCode tells whether c can be a symbol code: a printable
 // character other than space, '|' and '~'.
 func isValidSymbolCode(c byte) bool {
@@ -168,6 +194,9 @@ func (p *Packet) parseCompressedPosition(body string, opt *options) error {
 
 	if len(body) < 13 {
 		return p.fail(ErrCompShort, "compressed position too short")
+	}
+	if err := validCompressedPosition(body[:13]); err != "" {
+		return p.fail(ErrCompInvalid, err)
 	}
 
 	// The overlay characters 0-9 are sent as a-j in a compressed position,

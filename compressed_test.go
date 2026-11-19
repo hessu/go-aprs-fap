@@ -1,6 +1,7 @@
 package fap
 
 import (
+	"errors"
 	"fmt"
 	"testing"
 )
@@ -345,6 +346,33 @@ func TestCompressedCommentExtensions(t *testing.T) {
 			}
 			if p.Comment != tc.comment {
 				t.Errorf("comment = %q, want %q", p.Comment, tc.comment)
+			}
+		})
+	}
+}
+
+// TestCompressedInvalidCharacters tests that a compressed position is
+// invalid if a base-91 digit, the symbol code, or a course/speed or type
+// byte is out of range. The packets are variants of a packet from
+// APRS-IS with one byte changed. The expected values are from the Perl
+// module.
+func TestCompressedInvalidCharacters(t *testing.T) {
+	const header = "TEST>APDW18,WIDE2-1,qAR,N4VGW-1:!"
+	tests := []struct {
+		name string
+		pos  string
+	}{
+		{"base-91 digit", "/;Y.1:TH\x7f#  ! WIDE1"},
+		{"symbol code", "/;Y.1:THw|  ! WIDE1"},
+		{"course byte", "/;Y.1:THw#\x01 ! WIDE1"},
+		{"type byte", "/;Y.1:THw#  | WIDE1"},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			_, err := Parse(header + tc.pos)
+			if !errors.Is(err, ErrCompInvalid) {
+				t.Fatalf("error = %v, want %v", err, ErrCompInvalid)
 			}
 		})
 	}
