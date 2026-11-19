@@ -896,3 +896,51 @@ func TestWxPartialWind(t *testing.T) {
 		})
 	}
 }
+
+// TestWxTrailingCharacter tests that a single character after the
+// weather fields is kept in the comment or the software ID, and not
+// dropped. The expected values are from the Perl module.
+func TestWxTrailingCharacter(t *testing.T) {
+	tests := []struct {
+		name     string
+		packet   string
+		comment  string
+		software string
+	}{
+		{
+			name:    "comment",
+			packet:  "N0CALL>APRS,TCPIP*:!6000.00N/02500.00E_090/005g010t050h50x",
+			comment: "x",
+		},
+		{
+			name:     "after malformed value",
+			packet:   "N0CALL>APRS,TCPIP*:!6000.00N/02500.00E_090/005g010t050h50L-00x",
+			software: "L-00x",
+		},
+		{
+			name:   "space",
+			packet: "N0CALL>APRS,TCPIP*:!6000.00N/02500.00E_090/005g010t050h50 ",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			p, err := Parse(tc.packet)
+			if err != nil {
+				t.Fatalf("failed to parse: %v", err)
+			}
+			if p.Wx == nil {
+				t.Fatal("wx is nil")
+			}
+			if p.Wx.Humidity == nil || *p.Wx.Humidity != 50 {
+				t.Errorf("humidity = %v, want 50", p.Wx.Humidity)
+			}
+			if p.Comment != tc.comment {
+				t.Errorf("comment = %q, want %q", p.Comment, tc.comment)
+			}
+			if p.Wx.Software != tc.software {
+				t.Errorf("software = %q, want %q", p.Wx.Software, tc.software)
+			}
+		})
+	}
+}

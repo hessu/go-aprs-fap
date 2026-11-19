@@ -95,7 +95,10 @@ func parseWeatherFields(data string, wx *Weather) {
 
 	for i < len(data) {
 		if i+1 >= len(data) {
-			break
+			// A single character is left, too short for a weather
+			// field: it is the comment.
+			finish(data[i:])
+			return
 		}
 
 		consumed := 0
