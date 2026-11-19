@@ -160,7 +160,12 @@ func (p *Packet) parseCompressedPosition(body string, opt *options) error {
 		return p.fail(ErrCompShort, "compressed position too short")
 	}
 
+	// The overlay characters 0-9 are sent as a-j in a compressed position,
+	// since digits would be ambiguous with the base-91 values.
 	p.SymbolTable = body[0]
+	if p.SymbolTable >= 'a' && p.SymbolTable <= 'j' {
+		p.SymbolTable = p.SymbolTable - 'a' + '0'
+	}
 
 	// Decode latitude (4 bytes, base-91)
 	lat := 90.0 - float64(

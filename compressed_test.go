@@ -267,3 +267,38 @@ func TestCompressedWeatherSpaceGust(t *testing.T) {
 		t.Errorf("temp = %s, want 12.2", got)
 	}
 }
+
+// TestCompressedOverlayDigit tests that the overlay characters a-j of a
+// compressed position are decoded to the overlay digits 0-9. The first
+// packet is from APRS-IS. The expected values are from the Perl module.
+func TestCompressedOverlayDigit(t *testing.T) {
+	tests := []struct {
+		table byte
+		want  byte
+	}{
+		{'b', '1'},
+		{'j', '9'},
+		{'/', '/'},
+	}
+
+	for _, tc := range tests {
+		t.Run(string(tc.table), func(t *testing.T) {
+			p, err := Parse("TEST>APDW18,WIDE2-1,qAR,N4VGW-1:!" + string(tc.table) + ";Y.1:THw#  ! WIDE1 DigiPi")
+			if err != nil {
+				t.Fatalf("failed to parse: %v", err)
+			}
+			if p.SymbolTable != tc.want {
+				t.Errorf("symboltable = %c, want %c", p.SymbolTable, tc.want)
+			}
+			if p.SymbolCode != '#' {
+				t.Errorf("symbolcode = %c, want #", p.SymbolCode)
+			}
+			if got := fmt.Sprintf("%.10f", *p.Latitude); got != "37.3446784940" {
+				t.Errorf("latitude = %s, want 37.3446784940", got)
+			}
+			if got := fmt.Sprintf("%.10f", *p.Longitude); got != "-78.8504801458" {
+				t.Errorf("longitude = %s, want -78.8504801458", got)
+			}
+		})
+	}
+}
