@@ -50,6 +50,9 @@ func EncodeMessage(msg *Message) (string, error) {
 				// Reply-ack: {ID}ackID, or {ID} to tell that reply-acks
 				// are supported — total of ID + '}' + AckID must fit in 5 chars
 				if len(msg.ID)+1+len(msg.AckID) > 5 {
+					if msg.AckID == "" {
+						return "", &ParseError{Code: ErrMsgReplyAck.Code, Msg: "message ID too long for the reply-ack format {ID}, at most 4 characters"}
+					}
 					return "", &ParseError{Code: ErrMsgReplyAck.Code, Msg: "reply-ack too long to embed, send ack separately"}
 				}
 				content += "{" + msg.ID + "}" + msg.AckID

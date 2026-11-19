@@ -3,6 +3,7 @@ package fap
 import (
 	"errors"
 	"fmt"
+	"strings"
 	"testing"
 )
 
@@ -344,10 +345,24 @@ func TestEncodeMessageReplyAckSupport(t *testing.T) {
 			p.Message.ID, p.Message.AckID, p.Message.ReplyAck)
 	}
 
-	// The ID and '}' must fit in 5 characters
+	// The ID and '}' must fit in 5 characters. The error must be about
+	// the ID, since there is no ack to send separately.
 	msg.ID = "12345"
-	if _, err := EncodeMessage(msg); !errors.Is(err, ErrMsgReplyAck) {
+	_, err = EncodeMessage(msg)
+	if !errors.Is(err, ErrMsgReplyAck) {
 		t.Errorf("5-character ID: error = %v, want %v", err, ErrMsgReplyAck)
+	}
+	if err != nil && strings.Contains(err.Error(), "send ack separately") {
+		t.Errorf("5-character ID: error = %q, should not tell to send an ack", err)
+	}
+
+	msg.ID = "1234"
+	body, err = EncodeMessage(msg)
+	if err != nil {
+		t.Fatalf("4-character ID: EncodeMessage failed: %v", err)
+	}
+	if want := ":N0CALL   :Testing, 1 2 3{1234}"; body != want {
+		t.Errorf("4-character ID: body = %q, want %q", body, want)
 	}
 }
 
