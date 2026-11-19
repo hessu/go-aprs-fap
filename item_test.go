@@ -200,6 +200,26 @@ func TestItemErrors(t *testing.T) {
 			packet:  "N0CALL-1>APRS:)ABCDEFGHIJ4903.50N/07201.75W>",
 			wantErr: ErrItemInvalid,
 		},
+		{
+			name:    "8-bit character in name",
+			packet:  "N0CALL-1>APRS:)AB\xe4CD!4903.50N/07201.75W>",
+			wantErr: ErrItemInvalid,
+		},
+		{
+			name:    "UTF-8 name",
+			packet:  "N0CALL-1>APRS:)Pörssi!4903.50N/07201.75W>",
+			wantErr: ErrItemInvalid,
+		},
+		{
+			name:    "control character in name",
+			packet:  "N0CALL-1>APRS:)AB\x01CD!4903.50N/07201.75W>",
+			wantErr: ErrItemInvalid,
+		},
+		{
+			name:    "name too short",
+			packet:  "N0CALL-1>APRS:)AB!4903.50N/07201.75W>xxx",
+			wantErr: ErrItemInvalid,
+		},
 	}
 
 	for _, tc := range tests {

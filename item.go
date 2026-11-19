@@ -1,5 +1,7 @@
 package fap
 
+import "fmt"
+
 // parseItem parses an APRS item packet.
 // Format: )ITEMNAME!LATITUDE/LONGITUDEsymbol...
 func (p *Packet) parseItem(opt *options) error {
@@ -11,17 +13,25 @@ func (p *Packet) parseItem(opt *options) error {
 		return p.fail(ErrItemShort, "item packet too short")
 	}
 
-	// Item name is 3-9 characters, terminated by ! (alive) or _ (killed)
+	// Item name is 3-9 printable ASCII characters, terminated by
+	// ! (alive) or _ (killed)
 	nameEnd := -1
 	for i := 0; i < len(body) && i < 10; i++ {
-		if body[i] == '!' || body[i] == '_' {
+		c := body[i]
+		if c == '!' || c == '_' {
 			nameEnd = i
 			break
+		}
+		if c < 0x20 || c > 0x7e {
+			return p.fail(ErrItemInvalid, fmt.Sprintf("invalid character in item name: 0x%02x", c))
 		}
 	}
 
 	if nameEnd < 0 {
 		return p.fail(ErrItemInvalid, "item name terminator not found")
+	}
+	if nameEnd < 3 {
+		return p.fail(ErrItemInvalid, "item name too short")
 	}
 
 	p.ItemName = body[:nameEnd]
