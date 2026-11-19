@@ -47,6 +47,13 @@ func (p *Packet) parseNMEA(opt *options) error {
 		body = checksumArea
 	}
 
+	// The symbol may be given in the destination callsign; the default
+	// is a dot, as in the Perl module.
+	p.SymbolTable, p.SymbolCode = '/', '/'
+	if table, code, ok := symbolFromDstCall(p.DstCallsign); ok {
+		p.SymbolTable, p.SymbolCode = table, code
+	}
+
 	parts := strings.Split(body, ",")
 	if len(parts) < 2 {
 		return p.fail(ErrNMEAShort, "NMEA sentence too short")

@@ -550,3 +550,71 @@ func TestParseGPRMCTimestampErrors(t *testing.T) {
 		})
 	}
 }
+
+// TestNMEASymbol tests the symbol of an NMEA packet: the symbol encoded
+// in the destination callsign, or a dot by default. The packet is from
+// APRS-IS, with other destination callsigns. The expected values are
+// from the Perl module.
+func TestNMEASymbol(t *testing.T) {
+	const body = ",WIDE1-1,IGATE,TCPIP*,qAS,TEST-3:$GPRMC,220012.00,A,4536.13071,N,12239.25305,W,0.068,,191126,,,D*6C"
+	tests := []struct {
+		dst   string
+		table byte
+		code  byte
+	}{
+		{"APRS", '/', '/'},
+		{"GPSC27", '/', ';'},
+		{"GPSOB4", '4', '!'},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.dst, func(t *testing.T) {
+			p, err := Parse("TEST-2>" + tc.dst + body)
+			if err != nil {
+				t.Fatalf("failed to parse: %v", err)
+			}
+			if p.SymbolTable != tc.table || p.SymbolCode != tc.code {
+				t.Errorf("symbol = %c%c, want %c%c", p.SymbolTable, p.SymbolCode, tc.table, tc.code)
+			}
+		})
+	}
+}
+
+// TestSymbolFromDstCall tests decoding the destination callsign symbols.
+// The expected values are from the Perl module.
+func TestSymbolFromDstCall(t *testing.T) {
+	tests := []struct {
+		dst  string
+		want string // table and code, empty if none
+	}{
+		{"GPSBB", "/!"},
+		{"SPCBB", "/!"},
+		{"GPSOB", "\\!"},
+		{"GPSOB4", "4!"},
+		{"GPSOBa", "\\!"},
+		{"GPSOB-1", "\\!"},
+		{"GPSC01", "/!"},
+		{"GPSC94", "/~"},
+		{"GPSE27", "\\;"},
+		{"GPSC00", ""},
+		{"GPSC95", ""},
+		{"GPSCAB", ""},
+		{"GPSZZ", ""},
+		{"GPSX", ""},
+		{"APRS", ""},
+		{"XGPSOB", ""},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.dst, func(t *testing.T) {
+			table, code, ok := symbolFromDstCall(tc.dst)
+			got := ""
+			if ok {
+				got = string([]byte{table, code})
+			}
+			if got != tc.want {
+				t.Errorf("symbol = %q, want %q", got, tc.want)
+			}
+		})
+	}
+}
