@@ -619,3 +619,70 @@ func TestWxPlaceholderLength(t *testing.T) {
 		})
 	}
 }
+
+// TestWxShortAndLongValues tests weather values which do not have the
+// nominal number of digits of the field: a 2-digit temperature and a
+// 3-digit humidity. Humidity over 100% is ignored. The first two packets
+// are from APRS-IS, the expected values are from the Perl module.
+func TestWxShortAndLongValues(t *testing.T) {
+	tests := []struct {
+		name     string
+		packet   string
+		temp     string
+		humidity string
+		pressure string
+	}{
+		{
+			name:     "2-digit temperature",
+			packet:   "TEST-13>APRS,TCPIP*,qAS,TEST:!3553.76N/07854.92W_098/000g000t58r000p000P000h47b10178",
+			temp:     "14.4",
+			humidity: "47",
+			pressure: "1017.8",
+		},
+		{
+			name:     "humidity 100",
+			packet:   "TEST-15>APRS,WIDE1-1,qAR,SK3W-10:=6000.88N/01626.37E_.../...g...t360h100b-976Batt=93%",
+			temp:     "182.2",
+			humidity: "100",
+		},
+		{
+			name:     "humidity over 100",
+			packet:   "TEST-15>APRS,WIDE1-1,qAR,SK3W-10:=6000.88N/01626.37E_.../...g...t060h101b10123",
+			temp:     "15.6",
+			pressure: "1012.3",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			p, err := Parse(tc.packet)
+			if err != nil {
+				t.Fatalf("failed to parse: %v", err)
+			}
+			if p.Wx == nil {
+				t.Fatal("wx is nil")
+			}
+			got := ""
+			if p.Wx.Temp != nil {
+				got = fmt.Sprintf("%.1f", *p.Wx.Temp)
+			}
+			if got != tc.temp {
+				t.Errorf("temp = %q, want %q", got, tc.temp)
+			}
+			got = ""
+			if p.Wx.Humidity != nil {
+				got = fmt.Sprintf("%d", *p.Wx.Humidity)
+			}
+			if got != tc.humidity {
+				t.Errorf("humidity = %q, want %q", got, tc.humidity)
+			}
+			got = ""
+			if p.Wx.Pressure != nil {
+				got = fmt.Sprintf("%.1f", *p.Wx.Pressure)
+			}
+			if got != tc.pressure {
+				t.Errorf("pressure = %q, want %q", got, tc.pressure)
+			}
+		})
+	}
+}

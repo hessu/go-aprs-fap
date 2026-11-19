@@ -139,18 +139,20 @@ func parseWeatherFields(data string, wx *Weather) {
 			} else if n := skipWxField(data[i+1:]); n > 0 {
 				consumed = 1 + n
 			}
-		case 'h': // Humidity (%)
-			if val, n := parseWxInt(data[i+1:], 2); n > 0 {
+		case 'h': // Humidity (%), 0 is 100%
+			if val, n := parseWxInt(data[i+1:], 3); n > 0 {
 				if val == 0 {
 					val = 100
 				}
-				wx.Humidity = &val
+				if val <= 100 {
+					wx.Humidity = &val
+				}
 				consumed = 1 + n
 			} else if n := skipWxField(data[i+1:]); n > 0 {
 				consumed = 1 + n
 			}
 		case 'b': // Barometric pressure (tenths of millibar)
-			if val, n := parseWxInt(data[i+1:], 5); n > 0 {
+			if val, n := parseWxDigits(data[i+1:], 4, 5); n > 0 {
 				v := float64(val) / 10.0
 				wx.Pressure = &v
 				consumed = 1 + n
@@ -259,63 +261,42 @@ func skipWxField(s string) int {
 	return n
 }
 
-// parseWxInt extracts an integer of up to maxDigits from the string.
-// Returns the value and number of characters consumed.
-// Returns 0, 0 if the field contains only dots/spaces (missing data).
-func parseWxInt(s string, maxDigits int) (int, int) {
-	if len(s) < maxDigits {
+// parseWxDigits extracts an integer of minDigits to maxDigits digits
+// from the start of the string, like the \d{min,max} patterns of the
+// Perl module. Returns the value and number of characters consumed, or
+// 0, 0 if there are fewer digits than minDigits.
+func parseWxDigits(s string, minDigits, maxDigits int) (int, int) {
+	n := 0
+	val := 0
+	for n < len(s) && n < maxDigits && s[n] >= '0' && s[n] <= '9' {
+		val = val*10 + int(s[n]-'0')
+		n++
+	}
+	if n < minDigits || n == 0 {
 		return 0, 0
 	}
-
-	field := s[:maxDigits]
-
-	// Check for missing data (dots or spaces)
-	allMissing := true
-	for _, c := range field {
-		if c != '.' && c != ' ' {
-			allMissing = false
-			break
-		}
-	}
-	if allMissing {
-		return 0, 0
-	}
-
-	val, err := strconv.Atoi(strings.TrimSpace(field))
-	if err != nil {
-		return 0, 0
-	}
-
-	return val, maxDigits
+	return val, n
 }
 
-// parseWxSignedInt is like parseWxInt but handles negative values.
+// parseWxInt extracts an integer of 1 to maxDigits digits from the start
+// of the string. Stations do not always zero-pad the values to the width
+// of the field. Returns the value and number of characters consumed, or
+// 0, 0 if the string does not start with a digit.
+func parseWxInt(s string, maxDigits int) (int, int) {
+	return parseWxDigits(s, 1, maxDigits)
+}
+
+// parseWxSignedInt is like parseWxInt but accepts a leading minus sign,
+// which is not counted in maxDigits.
 func parseWxSignedInt(s string, maxDigits int) (int, int) {
-	if len(s) < maxDigits {
-		return 0, 0
-	}
-
-	field := s[:maxDigits]
-
-	allMissing := true
-	for _, c := range field {
-		if c != '.' && c != ' ' {
-			allMissing = false
-			break
+	if len(s) > 0 && s[0] == '-' {
+		val, n := parseWxInt(s[1:], maxDigits)
+		if n == 0 {
+			return 0, 0
 		}
+		return -val, n + 1
 	}
-	if allMissing {
-		return 0, 0
-	}
-
-	// Handle negative with leading minus
-	trimmed := strings.TrimSpace(field)
-	val, err := strconv.Atoi(trimmed)
-	if err != nil {
-		return 0, 0
-	}
-
-	return val, maxDigits
+	return parseWxInt(s, maxDigits)
 }
 
 // parseULTWFields parses sequential 4-hex-character fields from ULTW data.
